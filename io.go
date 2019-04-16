@@ -2,9 +2,9 @@ package dutil
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 )
 
 //const (
@@ -31,52 +31,15 @@ func ReadJsonFileAndUnmarshal(filePath string, i interface{}) error {
 	return json.Unmarshal(data, &i)
 }
 
-func writeFile(filePath string) (fileObj *os.File, err error) {
-	fileObj, err = os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.ModePerm)
-	if err != nil {
-		if os.IsNotExist(err) {
-			fmt.Println("1", err)
-			//os.MkdirAll(filePath, os.ModePerm)
-			fileObj, err = os.Create(filePath)
-			if err != nil {
-				fmt.Println("2", err)
-				return nil, err
-			}
-		} else {
-			fmt.Println("3", err)
-			return nil, err
-		}
-	}
-	return
+func writeFile(filePath, file string, data []byte) error {
+	os.MkdirAll(filePath, os.ModePerm)
+	return ioutil.WriteFile(path.Join(filePath, file), data, os.ModePerm)
 }
 
-func WriteString(filePath, content string) error {
-	return ioutil.WriteFile(filePath, []byte(content), os.ModePerm)
-	//fileObj, err := writeFile(filePath)
-	//if err != nil {
-	//	return err
-	//}
-	//defer fileObj.Close()
-	//
-	//_, err = fileObj.WriteString(content)
-	//if err != nil {
-	//	return err
-	//} else {
-	//	return nil
-	//}
+func WriteString(filePath, file, data string) error {
+	return writeFile(filePath, file, []byte(data))
 }
 
-func WriteByte(filePath string, data []byte) error {
-	fileObj, err := writeFile(filePath)
-	if err != nil {
-		return err
-	}
-	defer fileObj.Close()
-
-	_, err = fileObj.Write(data)
-	if err != nil {
-		return err
-	} else {
-		return nil
-	}
+func WriteByte(filePath, file string, data []byte) error {
+	return writeFile(filePath, file, data)
 }
