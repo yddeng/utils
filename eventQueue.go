@@ -1,9 +1,5 @@
 package dutil
 
-import (
-	"sync"
-)
-
 const defSize = 1 << 4 //16
 
 type EventQueue struct {
