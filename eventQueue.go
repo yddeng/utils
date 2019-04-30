@@ -8,7 +8,6 @@ const defSize = 1 << 4 //16
 
 type EventQueue struct {
 	queue chan interface{}
-	lock  sync.Mutex
 }
 
 func NewEventQueue() *EventQueue {
@@ -21,9 +20,6 @@ func NewEventQueue() *EventQueue {
 }
 
 func (e *EventQueue) Add(cb func()) {
-	defer e.lock.Unlock()
-	e.lock.Lock()
-
 	e.queue <- cb
 }
 
