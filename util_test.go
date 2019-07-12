@@ -12,7 +12,7 @@ func TestReadJsonFileAndUnmarshal(t *testing.T) {
 		Name string
 	}
 	var infos []Info
-	err := dutil.ReadJsonFileAndUnmarshal("file/config.json", &infos)
+	err := dutil.DecodeJsonFile("file/config.json", &infos)
 	fmt.Println(infos, err)
 }
 

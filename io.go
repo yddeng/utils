@@ -23,7 +23,7 @@ func ReadFile(filePath string) ([]byte, error) {
 }
 
 //读取json文件并反序列化
-func ReadJsonFileAndUnmarshal(filePath string, i interface{}) error {
+func DecodeJsonFile(filePath string, i interface{}) error {
 	data, err := ReadFile(filePath)
 	if err != nil {
 		return err
