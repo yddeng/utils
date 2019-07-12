@@ -1,9 +1,10 @@
 package dutil
 
 import (
+	"fmt"
 	"log"
 	"os"
-	"path"
+	"time"
 )
 
 //log.New(logFile, "[debug]", log.Ldate|log.Ltime|log.Llongfile)
@@ -22,30 +23,88 @@ import (
 type LogType int
 
 const (
-	InfoLog  = LogType(1)
-	DebugLog = LogType(2)
-	ErrorLog = LogType(3)
+	InfoLog LogType = iota
+	DebugLog
+	ErrorLog
 )
 
-type DLogger struct {
+var LogLevel = [...]string{
+	"[INFO]",
+	"[DEBUG]",
+	"[ERROR]",
 }
 
-func NewLogger(basePath string, fileName string) *log.Logger {
-	//var logFile io.Writer
-	os.MkdirAll(basePath, os.ModePerm)
+type Logger struct {
+	fPath  string
+	logger *log.Logger
+}
 
-	// 第三个参数为文件权限，请参考linux文件权限，664在这里为八进制，代表：rw-rw-r--
-	logFile, err := os.OpenFile(path.Join(basePath, fileName), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+func NewLogger(basePath, fileName string) *Logger {
+	return newLogger(basePath, fileName)
+}
+
+func newLogger(basePath, fileName string) *Logger {
+	//var logFile io.Writer
+	year, month, day := time.Now().Date()
+	hour, min, sec := time.Now().Clock()
+
+	dir := fmt.Sprintf("%s/%04d-%02d-%02d", basePath, year, month, day)
+	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
-		log.Fatal(err)
-	} else {
-		debugLog := log.New(logFile, "[debug]", log.Ldate|log.Ltime|log.Llongfile)
-		return debugLog
+		panic(err)
 	}
 
-	return nil
+	fPath := fmt.Sprintf("%s/%s.%02d.%02d.%02d.log", dir, fileName, hour, min, sec)
+
+	// 第三个参数为文件权限，请参考linux文件权限，664在这里为八进制，代表：rw-rw-r--
+	logFile, err := os.OpenFile(fPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		panic(err)
+	}
+
+	logger := log.New(logFile, "[DEBUG]", log.Ldate|log.Ltime|log.Lshortfile)
+
+	return &Logger{
+		fPath:  fPath,
+		logger: logger,
+	}
 }
 
-func write(t LogType, format string, args ...interface{}) {
+func (l *Logger) print(t LogType, format string, v ...interface{}) {
+	prefix := LogLevel[t]
 
+	if l.logger.Prefix() != prefix {
+		l.logger.SetPrefix(prefix)
+	}
+
+	if format == "" {
+		l.logger.Println(v...)
+	} else {
+		l.logger.Printf(format, v...)
+	}
+
+}
+
+func (l *Logger) Infoln(v ...interface{}) {
+	l.print(InfoLog, "", v...)
+}
+
+func (l *Logger) Infof(format string, v ...interface{}) {
+	l.print(InfoLog, format, v...)
+}
+
+func (l *Logger) Debugln(v ...interface{}) {
+	l.print(DebugLog, "", v...)
+}
+
+func (l *Logger) Debugf(format string, v ...interface{}) {
+	l.print(DebugLog, format, v...)
+}
+
+func (l *Logger) Errorln(v ...interface{}) {
+	l.print(ErrorLog, "", v...)
+}
+
+func (l *Logger) Errorf(format string, v ...interface{}) {
+	l.print(ErrorLog, format, v...)
 }
