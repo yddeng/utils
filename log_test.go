@@ -13,4 +13,5 @@ func TestNewLogger(t *testing.T) {
 	logger.Debugf("%s : %d", "Debugf message", 2)
 	logger.Errorln("Errorln message", 1)
 	logger.Errorf("%s : %d", "Errorf message", 2)
+
 }

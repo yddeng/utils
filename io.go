@@ -28,7 +28,7 @@ func DecodeJsonFile(filePath string, i interface{}) error {
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(data, &i)
+	return json.Unmarshal(data, i)
 }
 
 func writeFile(filePath, file string, data []byte) error {

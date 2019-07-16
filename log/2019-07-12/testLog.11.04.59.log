@@ -1,6 +1,0 @@
-[INFO]2019/07/12 11:04:59 log.go:81: infoln message 1
-[INFO]2019/07/12 11:04:59 log.go:83: infof message : 2
-[DEBUG]2019/07/12 11:04:59 log.go:81: Debugln message 1
-[DEBUG]2019/07/12 11:04:59 log.go:83: Debugf message : 2
-[ERROR]2019/07/12 11:04:59 log.go:81: Errorln message 1
-[ERROR]2019/07/12 11:04:59 log.go:83: Errorf message : 2

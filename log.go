@@ -62,7 +62,7 @@ func newLogger(basePath, fileName string) *Logger {
 		panic(err)
 	}
 
-	logger := log.New(logFile, "[DEBUG]", log.Ldate|log.Ltime|log.Lshortfile)
+	logger := log.New(logFile, "", log.Ldate|log.Ltime|log.Lshortfile)
 
 	return &Logger{
 		fPath:  fPath,
@@ -73,14 +73,18 @@ func newLogger(basePath, fileName string) *Logger {
 func (l *Logger) print(t LogType, format string, v ...interface{}) {
 	prefix := LogLevel[t]
 
-	if l.logger.Prefix() != prefix {
-		l.logger.SetPrefix(prefix)
+	text := ""
+	if format == "" {
+		text = fmt.Sprintln(v...)
+	} else {
+		text = fmt.Sprintf(format, v...)
 	}
 
-	if format == "" {
-		l.logger.Println(v...)
-	} else {
-		l.logger.Printf(format, v...)
+	if l.logger != nil {
+		if l.logger.Prefix() != prefix {
+			l.logger.SetPrefix(prefix)
+		}
+		l.logger.Output(3, text)
 	}
 
 }

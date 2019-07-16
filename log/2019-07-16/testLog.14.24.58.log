@@ -1,0 +1,6 @@
+[INFO]2019/07/16 14:24:58 log_test.go:10: infoln message 1
+[INFO]2019/07/16 14:24:58 log_test.go:11: infof message : 2
+[DEBUG]2019/07/16 14:24:58 log_test.go:12: Debugln message 1
+[DEBUG]2019/07/16 14:24:58 log_test.go:13: Debugf message : 2
+[ERROR]2019/07/16 14:24:58 log_test.go:14: Errorln message 1
+[ERROR]2019/07/16 14:24:58 log_test.go:15: Errorf message : 2
