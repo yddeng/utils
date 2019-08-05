@@ -15,4 +15,7 @@ func TestDecodeJsonFile(t *testing.T) {
 	var infos = []Info{}
 	err := io.DecodeJsonFile("./file/config.json", &infos)
 	fmt.Println(infos, err)
+
+	err = io.WriteString("./", "out.txt", "out")
+	fmt.Println(err)
 }
