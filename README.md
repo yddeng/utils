@@ -1,4 +1,4 @@
-# duit
+# dutil
 
 工具包
 
