@@ -93,7 +93,7 @@ func (h *Heap) up(j int) {
 	}
 }
 
-//[i0,n]间做交换
+//[i0,n)间做交换
 func (h *Heap) down(i0, n int) bool {
 	i := i0
 	for {
