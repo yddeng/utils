@@ -46,13 +46,16 @@ func TestNewEventQueue(t *testing.T) {
 		fmt.Println("onEvent", i)
 	})
 
-	go eq.Run()
+	eq.Run(1)
 
 	fmt.Println("push 1:", eq.Push(1))
 	fmt.Println("push 2:", eq.Push(2))
 	fmt.Println("push 3:", eq.Push(3))
 
-	eq.Close()
+	events := eq.Close()
+	for _, e := range events {
+		fmt.Println("not done", e)
+	}
 	fmt.Println("push 4:", eq.Push(4))
 
 }

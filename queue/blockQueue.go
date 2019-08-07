@@ -5,7 +5,9 @@ import (
 	"sync/atomic"
 )
 
-var ErrClosed = fmt.Errorf("queue is closed")
+var (
+	ErrClosed = fmt.Errorf("queue is closed")
+)
 
 //close flag
 const queClosed = 1
@@ -37,9 +39,6 @@ func (q *BlockQueue) Push(elem interface{}) error {
 func (q *BlockQueue) Pop() (elem interface{}, closed bool) {
 	if atomic.LoadInt32(&q.closed) == queClosed {
 		closed = true
-		if q.Len() > 0 {
-			elem = <-q.buf
-		}
 	} else {
 		elem = <-q.buf
 	}
