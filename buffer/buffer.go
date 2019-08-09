@@ -203,7 +203,7 @@ func (b *Buffer) WriteByte(c byte) {
 }
 
 func (b *Buffer) WriteString(str string) {
-	data := []byte(str)
+	data := *(*[]byte)(unsafe.Pointer(&str))
 	b.Write(data)
 }
 

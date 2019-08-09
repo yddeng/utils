@@ -34,7 +34,10 @@ func TestNewBuffer(t *testing.T) {
 	fmt.Println(c, err)
 	fmt.Println(buffer.Peek(), buffer.Len())
 
-	buffer.Write([]byte{10, 15, 14, 15, 16, 15, 17, 12, 18})
+	buffer.WriteString("hello")
 	fmt.Println(buffer.Peek(), buffer.Len())
+	_, _ = buffer.ReadByte()
+	str, _ := buffer.ReadString(5)
+	fmt.Println(str, buffer.Len())
 
 }
