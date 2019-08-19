@@ -1,11 +1,13 @@
 package queue
 
-import "sync/atomic"
+import (
+	"sync/atomic"
+)
 
 type EventQueue struct {
-	queue   *BlockQueue
-	onEvent func(interface{})
-	started int32
+	queue      *BlockQueue
+	onEvent    func(interface{})
+	routineCnt int32 //执行队列的携程数量，等于0时表示没有启动
 }
 
 func NewEventQueue(size int, onEvent func(interface{})) *EventQueue {
@@ -21,16 +23,20 @@ func (e *EventQueue) Push(i interface{}) error {
 	return e.queue.Push(i)
 }
 
-//return all events not done, if close
-func (e *EventQueue) Close() []interface{} {
-	return e.queue.Close()
+func (e *EventQueue) Stop() {
+	if atomic.LoadInt32(&e.routineCnt) == 0 {
+		return
+	}
+
+	e.queue.Close()
+	atomic.StoreInt32(&e.routineCnt, 0)
 }
 
 //创建一定数目的协程来处理
 //count = 1 if routineCnt <= 0
 //当线程数大于1时，不能保证完成顺序与投递顺序一致
 func (e *EventQueue) Run(routineCnt int) {
-	if !atomic.CompareAndSwapInt32(&e.started, 0, 1) {
+	if atomic.LoadInt32(&e.routineCnt) != 0 {
 		return
 	}
 
@@ -39,11 +45,13 @@ func (e *EventQueue) Run(routineCnt int) {
 		count = 1
 	}
 
+	atomic.StoreInt32(&e.routineCnt, int32(count))
+
 	for i := 0; i < count; i++ {
 		go func() {
 			for {
 				ele, closed := e.queue.Pop()
-				if closed {
+				if closed && ele == nil {
 					return
 				} else {
 					e.onEvent(ele)
@@ -51,6 +59,7 @@ func (e *EventQueue) Run(routineCnt int) {
 			}
 		}()
 	}
+
 }
 
 /*
