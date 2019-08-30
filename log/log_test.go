@@ -7,6 +7,9 @@ import (
 
 func TestNewLogger(t *testing.T) {
 	logger := dlog.NewLogger("log", "testLog")
+	//dlog.CloseStdOut()
+	//logger.AsyncOut()
+	logger.SetOutLevel(dlog.DEBUG, dlog.INFO)
 
 	logger.Infoln("infoln message", 1)
 	logger.Infof("%s : %d", "infof message", 2)
@@ -14,5 +17,7 @@ func TestNewLogger(t *testing.T) {
 	logger.Debugf("%s : %d", "Debugf message", 2)
 	logger.Errorln("Errorln message", 1)
 	logger.Errorf("%s : %d", "Errorf message", 2)
+
+	select {}
 
 }
