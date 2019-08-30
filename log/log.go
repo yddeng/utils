@@ -2,7 +2,6 @@ package log
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"runtime"
 	"sync"
@@ -126,7 +125,7 @@ func (l *Logger) SetOutLevel(levels ...Level) {
 type OutFile struct {
 	basePath     string
 	fileName     string
-	writer       io.Writer
+	writer       *os.File
 	createTime   time.Time     //底层文件的创建时间
 	writeMaxSize int           //文件写入最大字节数
 	writeSize    int           //累计写入文件的字节数量
@@ -150,6 +149,9 @@ func (out *OutFile) openFile(now *time.Time) {
 		path := fmt.Sprintf("%s/%s.%02d.%02d.%02d.log", dir, out.fileName, hour, min, sec)
 		mode := os.O_RDWR | os.O_CREATE | os.O_APPEND
 		file, err := os.OpenFile(path, mode, 0666)
+		if out.writer != nil {
+			_ = out.writer.Close()
+		}
 		if nil == err {
 			out.writer = file
 			out.writeSize = 0
