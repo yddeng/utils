@@ -63,7 +63,6 @@ var (
 		FATAL: struct{}{},
 	}
 
-	nowFunc    = time.Now
 	stdOut     = true //控制台输出,默认开启
 	stdConsole = os.Stdout
 )
