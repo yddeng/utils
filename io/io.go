@@ -43,3 +43,29 @@ func WriteString(filePath, file, data string) error {
 func WriteByte(filePath, file string, data []byte) error {
 	return writeFile(filePath, file, data)
 }
+
+type IOFile struct {
+	file *os.File
+}
+
+func NewFile(filePath, fileName string) *IOFile {
+	if nil == os.MkdirAll(filePath, os.ModePerm) {
+		mode := os.O_RDWR | os.O_CREATE | os.O_APPEND
+		file, err := os.OpenFile(path.Join(filePath, fileName), mode, 0666)
+		if nil == err {
+			return &IOFile{
+				file: file,
+			}
+		}
+
+	}
+	return nil
+}
+
+func (f *IOFile) WriteString(data string) (int, error) {
+	return f.file.WriteString(data)
+}
+
+func (f *IOFile) WriteByte(data []byte) (int, error) {
+	return f.file.Write(data)
+}
