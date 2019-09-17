@@ -127,6 +127,18 @@ func (b *Buffer) Write(bytes []byte) (n int, err error) {
 	return needSz, nil
 }
 
+func (b *Buffer) WriteUint8BE(num uint8) {
+	b.Write([]byte{num})
+}
+
+func (b *Buffer) ReadUint8BE() (uint8, error) {
+	num, err := b.ReadByte()
+	if err != nil {
+		return 0, err
+	}
+	return num, nil
+}
+
 func (b *Buffer) WriteUint16BE(num uint16) {
 	var bt = make([]byte, 2)
 	binary.BigEndian.PutUint16(bt, num)
