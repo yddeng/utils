@@ -36,6 +36,8 @@ func TestNew(t *testing.T) {
 	oMap.SetType(reflect.TypeOf(int32(1)), reflect.TypeOf(&TT{}))
 	fmt.Println(oMap.Store("key", "value"))
 
+	var er error
+	er.Error()
 	val, ok = oMap.LoadByIdx(0)
 	fmt.Println("get index 0 :", val, ok)
 	val, ok = oMap.LoadByKey(int32(1))
