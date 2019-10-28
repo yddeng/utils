@@ -2,7 +2,7 @@ package io_test
 
 import (
 	"fmt"
-	"github.com/tagDong/dutil/io"
+	"github.com/yddeng/dutil/io"
 	"testing"
 )
 

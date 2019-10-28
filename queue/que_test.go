@@ -2,7 +2,7 @@ package queue_test
 
 import (
 	"fmt"
-	"github.com/tagDong/dutil/queue"
+	"github.com/yddeng/dutil/queue"
 	"testing"
 )
 

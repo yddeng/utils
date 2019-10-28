@@ -2,7 +2,7 @@ package buffer_test
 
 import (
 	"fmt"
-	dbuffer "github.com/tagDong/dutil/buffer"
+	dbuffer "github.com/yddeng/dutil/buffer"
 	"testing"
 )
 

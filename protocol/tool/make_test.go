@@ -2,7 +2,7 @@ package tool_test
 
 import (
 	"fmt"
-	"github.com/tagDong/dutil/protocol/tool"
+	"github.com/yddeng/dutil/protocol/tool"
 	"os"
 	"testing"
 )

@@ -2,7 +2,7 @@ package ticker_test
 
 import (
 	"fmt"
-	"github.com/tagDong/dutil/ticker"
+	"github.com/yddeng/dutil/ticker"
 	"testing"
 	"time"
 )

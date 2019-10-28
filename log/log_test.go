@@ -1,7 +1,7 @@
 package log_test
 
 import (
-	dlog "github.com/tagDong/dutil/log"
+	dlog "github.com/yddeng/dutil/log"
 	"testing"
 	"time"
 )

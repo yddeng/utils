@@ -2,7 +2,7 @@ package wordsFilter_test
 
 import (
 	"fmt"
-	"github.com/tagDong/dutil/wordsFilter"
+	"github.com/yddeng/dutil/wordsFilter"
 )
 
 func main() {

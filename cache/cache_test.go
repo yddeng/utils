@@ -5,7 +5,7 @@ package cache_test
 
 import (
 	"fmt"
-	"github.com/tagDong/dutil/cache"
+	"github.com/yddeng/dutil/cache"
 	"testing"
 )
 

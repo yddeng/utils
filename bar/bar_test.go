@@ -5,7 +5,7 @@ package bar_test
 
 import (
 	"fmt"
-	"github.com/tagDong/dutil/bar"
+	"github.com/yddeng/dutil/bar"
 	"math/rand"
 	"testing"
 	"time"

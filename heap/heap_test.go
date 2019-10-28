@@ -2,7 +2,7 @@ package heap_test
 
 import (
 	"fmt"
-	"github.com/tagDong/dutil/heap"
+	"github.com/yddeng/dutil/heap"
 	"testing"
 )
 

@@ -5,7 +5,7 @@ package orderMap_test
 
 import (
 	"fmt"
-	"github.com/tagDong/dutil/orderMap"
+	"github.com/yddeng/dutil/orderMap"
 	"reflect"
 	"testing"
 )

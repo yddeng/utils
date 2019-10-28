@@ -5,7 +5,7 @@ package bar
 
 import (
 	"fmt"
-	"github.com/tagDong/dutil/dstring"
+	"github.com/yddeng/dutil/dstring"
 	"sync"
 	"time"
 )

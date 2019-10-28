@@ -3,9 +3,9 @@ package protocol_test
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"github.com/tagDong/dutil/protocol"
-	"github.com/tagDong/dutil/protocol/pb"
-	"github.com/tagDong/dutil/protocol/protobuf"
+	"github.com/yddeng/dutil/protocol"
+	"github.com/yddeng/dutil/protocol/pb"
+	"github.com/yddeng/dutil/protocol/protobuf"
 	"testing"
 )
 
