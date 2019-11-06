@@ -33,7 +33,7 @@ func InitProtocol(protoType Protoc) {
 //注册协议，ID <-> 协议结构。编解码时使用
 func Register(id uint16, msg interface{}) error {
 	if dProto == nil {
-		return fmt.Errorf("protocol is nil,need init")
+		return fmt.Errorf("protobuf is nil,need init")
 	}
 
 	tt := reflect.TypeOf(msg)
@@ -51,7 +51,7 @@ func Register(id uint16, msg interface{}) error {
 //序列化，根据反射类型，获取协议ID、序列化后的二进制数据
 func Marshal(data interface{}) (uint16, []byte, error) {
 	if dProto == nil {
-		return 0, nil, fmt.Errorf("protocol is nil,need init")
+		return 0, nil, fmt.Errorf("protobuf is nil,need init")
 	}
 
 	id, ok := dProto.type2Id[reflect.TypeOf(data)]
@@ -70,7 +70,7 @@ func Marshal(data interface{}) (uint16, []byte, error) {
 //反序列化
 func Unmarshal(id uint16, data []byte) (msg interface{}, err error) {
 	if dProto == nil {
-		return nil, fmt.Errorf("protocol is nil,need init")
+		return nil, fmt.Errorf("protobuf is nil,need init")
 	}
 
 	tt, ok := dProto.id2Type[id]
