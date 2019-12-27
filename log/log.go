@@ -70,7 +70,7 @@ var (
 //关闭控制台输出
 func CloseStdOut() {
 	stdOut = false
-	stdConsole.Close()
+	//stdConsole.Close()
 }
 
 type Logger struct {
