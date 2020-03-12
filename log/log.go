@@ -55,12 +55,12 @@ var (
 	}
 
 	defOutLevel = map[Level]struct{}{
-		TRACE: struct{}{},
-		DEBUG: struct{}{},
-		INFO:  struct{}{},
-		WARN:  struct{}{},
-		ERROR: struct{}{},
-		FATAL: struct{}{},
+		TRACE: {},
+		DEBUG: {},
+		INFO:  {},
+		WARN:  {},
+		ERROR: {},
+		FATAL: {},
 	}
 
 	stdOut     = true //控制台输出,默认开启

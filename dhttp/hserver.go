@@ -30,9 +30,9 @@ func (s *HttpServer) Listen() error {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm() //解析参数，默认是不会解析的
-	//fmt.Fprintf(w, "Hi, I love you %s", html.EscapeString(r.URL.Path[1:]))
 	if r.Method == "GET" {
+		//fmt.Fprintf(w, "Hi, I love you %s", html.EscapeString(r.URL.Path[1:]))
+		r.ParseForm()                    //解析参数，默认是不会解析的
 		fmt.Println("method:", r.Method) //获取请求的方法
 
 		fmt.Println("username", r.Form["username"])

@@ -18,11 +18,11 @@ func TestNewTicker(t *testing.T) {
 	ticker.RegisterRepeatTicker(time.Millisecond*1500, func(t time.Time) {
 		fmt.Println("ticker3 repeat", t)
 	})
-	ticker2 := ticker.RegisterRepeatTicker(time.Millisecond*1000, func(t time.Time) {
+	ticker4 := ticker.RegisterRepeatTicker(time.Millisecond*1000, func(t time.Time) {
 		fmt.Println("ticker4 repeat", t)
 	})
 
 	time.Sleep(time.Second * 3)
-	ticker2.Stop()
+	ticker4.Stop()
 	select {}
 }

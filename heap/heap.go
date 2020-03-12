@@ -119,7 +119,7 @@ func (h *Heap) less(i, j int) bool {
 }
 
 func (h Heap) swap(i, j int) {
+	h.idMap[h.data[i]] = j
+	h.idMap[h.data[j]] = i
 	h.data[i], h.data[j] = h.data[j], h.data[i]
-	h.idMap[h.data[i]] = i
-	h.idMap[h.data[j]] = j
 }

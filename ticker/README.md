@@ -1,4 +1,4 @@
 # ticker
 
 
-低精度ticker
+高精度ticker
