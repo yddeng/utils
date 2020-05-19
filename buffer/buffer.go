@@ -7,124 +7,143 @@ import (
 	"unsafe"
 )
 
-var (
-	ErrWriteNone = errors.New("buffer: write none")
-	ErrFull      = errors.New("buffer: full")
-	ErrData      = errors.New("buffer: data not enough")
-)
+var ErrNotEnough = errors.New("buffer.Buffer: read length but not enough")
+var errNegativeRead = errors.New("buffer.Buffer: reader returned negative count from Read")
+
+const smallBufferSize = 64
+const maxInt = int(^uint(0) >> 1)
 
 type Buffer struct {
-	buff       []byte
-	cap        int
+	buf        []byte
 	roff, woff int //读、写偏移
 }
 
-//由于消息头的长度uint16的原因,故cap的最大值为65535
-func NewBuffer(cap int) *Buffer {
-	return &Buffer{
-		buff: make([]byte, cap),
-		cap:  cap,
-		roff: 0,
-		woff: 0,
+// 扩容 n ,如果剩余空间足够，则不扩容
+func (b *Buffer) grow(n int) {
+	if b.buf == nil || cap(b.buf) == 0 {
+		b.buf = make([]byte, smallBufferSize)
 	}
-}
 
-//已用
-func (b *Buffer) Len() int {
-	return b.woff - b.roff
-}
+	if b.FreeLen() >= n {
+		if b.Cap()-b.woff < n {
+			b.Reset()
+		}
+		return
+	}
 
-//未用
-func (b *Buffer) UsableLen() int {
-	return b.cap - (b.woff - b.roff)
-}
-
-func (b *Buffer) reset() {
-	copy(b.buff, b.buff[b.roff:b.woff])
-	b.woff = b.woff - b.roff
+	need := b.Len() + n
+	newCap := 2 * b.Cap()
+	for newCap < need {
+		newCap *= 2
+	}
+	buf := make([]byte, newCap)
+	copy(buf, b.buf[b.roff:b.woff])
+	b.buf = buf
 	b.roff = 0
+	b.woff = b.Len()
+
 }
 
-//拷贝一份数据，不重置
-func (b *Buffer) Peek() []byte {
-	var ret = make([]byte, b.woff-b.roff)
-	copy(ret, b.buff[b.roff:b.woff])
-	return ret
+func (b *Buffer) Grow(n int) {
+	if n < 0 {
+		return
+	}
+	b.grow(n)
 }
 
+func (b *Buffer) empty() bool  { return b.Len() == 0 }
+func (b *Buffer) Len() int     { return b.woff - b.roff }
+func (b *Buffer) Cap() int     { return cap(b.buf) }
+func (b *Buffer) FreeLen() int { return b.Cap() - b.Len() }
+
+// 清空
 func (b *Buffer) Clear() {
-	b.buff = make([]byte, b.cap)
-	b.woff = 0
+	b.buf = b.buf[:0]
 	b.roff = 0
+	b.woff = 0
 }
 
-func (b *Buffer) ReadFrom(reader io.Reader) (int, error) {
-	//重置缓存区
-	b.reset()
+// 清理已读数据，保留未读
+func (b *Buffer) Reset() {
+	if b.roff != 0 {
+		b.buf = b.buf[b.roff:]
+		b.woff = b.woff - b.roff
+		b.roff = 0
+	}
+}
 
-	// 可写入大小
-	var space = b.cap - b.woff
+func (b *Buffer) Bytes() []byte {
+	return b.buf[b.roff:b.woff]
+}
 
-	// 缓冲满
-	if 0 == space {
-		return 0, ErrFull
+func (b *Buffer) Read(p []byte) (n int, err error) {
+	if b.empty() {
+		if len(p) == 0 {
+			return 0, nil
+		}
+		return 0, io.EOF
 	}
 
-	// 计算可连续写入缓冲大小
-	var endPos = b.woff + space
+	n = copy(p, b.buf[b.roff:b.woff])
+	b.roff += n
+	return n, nil
+}
 
-	// 写入缓冲
-	readLen, err := reader.Read(b.buff[b.woff:endPos])
+const MinRead = 512
 
-	// 读取错误
-	if err != nil {
-		return 0, err
+// 只读一次，512 字节
+func (b *Buffer) ReadFrom(reader io.Reader) (n int, e error) {
+	b.Grow(MinRead)
+	n, e = reader.Read(b.buf[b.woff:])
+	if n < 0 {
+		panic(errNegativeRead)
 	}
 
-	// 没有读取到东西
-	if 0 == readLen {
-		return 0, ErrWriteNone
+	b.woff += n
+	return
+}
+
+func (b *Buffer) ReadAllFrom(reader io.Reader) (n int, e error) {
+	for {
+		m, err := b.ReadFrom(reader)
+		if m > 0 {
+			n += m
+		}
+		if err == io.EOF {
+			return n, nil
+		}
+		if err != nil {
+			return n, err
+		}
 	}
-
-	// 更新写入位置
-	b.woff += readLen
-
-	return readLen, nil
 }
 
 // 写入缓冲区
-func (b *Buffer) Write(bytes []byte) (n int, err error) {
-	var needSz = len(bytes)
-	if 0 == needSz {
-		return 0, ErrWriteNone
-	}
+func (b *Buffer) Write(p []byte) (n int, err error) {
+	b.Grow(len(p))
+	n = copy(b.buf[b.woff:], p)
+	b.woff += n
+	return
+}
 
-	// 可写入大小
-	var usableLen = b.UsableLen()
-	//fmt.Println(usableLen)
+func (b *Buffer) WriteTo(w io.Writer) (n int, err error) {
+	if nBytes := b.Len(); nBytes > 0 {
+		n, err = w.Write(b.buf[b.roff:b.woff])
+		if n > nBytes {
+			panic("bytes.Buffer.WriteTo: invalid Write count")
+		}
+		b.roff += n
+		if err != nil {
+			return
+		}
 
-	// 缓冲满, 或写不下
-	if 0 == usableLen || needSz > usableLen {
-		return 0, ErrFull
-	} else {
-		//连续可写入区域不够，将重置缓存区
-		var writeLen = b.cap - b.woff
-		if needSz > writeLen {
-			b.reset()
+		if n != nBytes {
+			err = io.ErrShortWrite
+			return
 		}
 	}
 
-	// 计算可连续写入缓冲大小
-	var endPos = b.woff + needSz
-	//fmt.Println(endPos)
-
-	// 写入缓冲
-	copy(b.buff[b.woff:endPos], bytes)
-
-	// 更新写入位置
-	b.woff += needSz
-
-	return needSz, nil
+	return
 }
 
 func (b *Buffer) WriteUint8BE(num uint8) {
@@ -185,26 +204,26 @@ func (b *Buffer) WriteBytes(data []byte) {
 	b.Write(data)
 }
 
-//获取len长度的数据
-func (b *Buffer) ReadBytes(len int) ([]byte, error) {
-	end := b.roff + len
-	if end > b.woff {
-		return nil, ErrData
+//获取 n 长度的数据
+func (b *Buffer) ReadBytes(n int) ([]byte, error) {
+	m := b.Len()
+	if m < n {
+		return nil, ErrNotEnough
 	}
 
-	var ret = make([]byte, len)
-	copy(ret, b.buff[b.roff:end])
-	b.roff += len
+	var data = make([]byte, n)
+	copy(data, b.buf[b.roff:b.roff+n])
+	b.roff += n
 
-	return ret, nil
+	return data, nil
 }
 
 func (b *Buffer) ReadByte() (byte, error) {
-	if b.Len() < 1 {
-		return 0, ErrData
+	if b.Len() == 0 {
+		return 0, ErrNotEnough
 	}
 
-	ret := b.buff[b.roff]
+	ret := b.buf[b.roff]
 	b.roff++
 
 	return ret, nil
@@ -220,14 +239,16 @@ func (b *Buffer) WriteString(str string) {
 }
 
 //获取len长度的数据
-func (b *Buffer) ReadString(len int) (string, error) {
-	bytes, err := b.ReadBytes(len)
+func (b *Buffer) ReadString(n int) (string, error) {
+	bytes, err := b.ReadBytes(n)
 	if err != nil {
 		return "", err
 	}
 
 	//不用拷贝
 	ret := *(*string)(unsafe.Pointer(&bytes))
-
 	return ret, nil
 }
+
+func NewBuffer(buf []byte) *Buffer     { return &Buffer{buf: buf, woff: len(buf)} }
+func NewBufferWithCap(cap int) *Buffer { return &Buffer{buf: make([]byte, cap)} }
