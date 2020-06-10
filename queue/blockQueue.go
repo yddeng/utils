@@ -107,7 +107,8 @@ func (q *BlockQueue) Do(f func(v interface{})) {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 
-	for i := 0; i < q.len(); i++ {
+	length := q.len()
+	for i := 0; i < length; i++ {
 		idx := (q.front + i) % q.cap
 		f(q.data[idx])
 	}

@@ -18,6 +18,7 @@ type Bar struct {
 
 	add      int
 	lastTime time.Time
+	userTime float64
 	done     chan struct{}
 }
 
@@ -80,12 +81,14 @@ func (b *Bar) print(now time.Time) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	tmp := "%s [%s%s]%s %s" //name, lbar, rbar, rate, speed
+	tmp := "%s [%s%s][%s:%.2fs] %s " //name, lbar, rbar, rate, speed
 
 	rate := b.current * 100 / b.total
 	lbw := barWidth * b.current / b.total
 	rbw := barWidth - lbw
-	speed := int(float64(b.add) / now.Sub(b.lastTime).Seconds())
+	subTime := now.Sub(b.lastTime).Seconds()
+	speed := int(float64(b.add) / subTime)
+	b.userTime += subTime
 
 	var lbar, rbar = "", ""
 	lbar = string(lbarChar[:lbw])
@@ -95,7 +98,7 @@ func (b *Bar) print(now time.Time) {
 
 	rateStr := fmt.Sprintf("%2d%%", rate)
 	speedStr := fmt.Sprintf("%s/s", dstring.ByteSizeFromat(int64(speed)))
-	txt := fmt.Sprintf(tmp, b.name, lbar, rbar, rateStr, speedStr)
+	txt := fmt.Sprintf(tmp, b.name, lbar, rbar, rateStr, b.userTime, speedStr)
 	fmt.Printf("%s\r", txt)
 
 	if b.current >= b.total {

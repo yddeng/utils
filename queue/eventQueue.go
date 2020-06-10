@@ -1,26 +1,47 @@
 package queue
 
 import (
+	"fmt"
+	"reflect"
 	"sync/atomic"
 )
 
+type event struct {
+	args []interface{}
+	fn   interface{}
+}
+
 type EventQueue struct {
-	queue      *BlockQueue
-	onEvent    func(interface{})
+	queue      *ChannelQueue
 	routineCnt int32 //执行队列的携程数量，等于0时表示没有启动
 }
 
-func NewEventQueue(size int, onEvent func(interface{})) *EventQueue {
+func NewEventQueue(size int) *EventQueue {
 	e := &EventQueue{
-		queue:   NewBlockQueue(size),
-		onEvent: onEvent,
+		queue: NewChannelQueue(size),
 	}
 
 	return e
 }
 
-func (e *EventQueue) Push(i interface{}) error {
-	return e.queue.Push(i)
+func preparePost(fn interface{}, args ...interface{}) (*event, error) {
+	e := &event{fn: fn}
+	switch fn.(type) {
+	case func():
+	case func([]interface{}), func(...interface{}):
+		e.args = args
+	default:
+		return nil, fmt.Errorf("invaild callback type %s", reflect.TypeOf(fn).String())
+	}
+	return e, nil
+}
+
+func (e *EventQueue) Push(fn interface{}, args ...interface{}) error {
+	event, err := preparePost(fn, args...)
+	if err != nil {
+		return err
+	}
+	return e.queue.PushB(event)
 }
 
 func (e *EventQueue) Stop() {
@@ -50,16 +71,29 @@ func (e *EventQueue) Run(routineCnt int) {
 	for i := 0; i < count; i++ {
 		go func() {
 			for {
-				ele, closed := e.queue.Pop()
-				if closed && ele == nil {
+				ele, opened := e.queue.PopB()
+				if !opened {
 					return
-				} else {
-					e.onEvent(ele)
 				}
+
+				event_ := ele.(*event)
+				pcall1(event_.fn, event_.args)
 			}
 		}()
 	}
 
+}
+
+func pcall1(fn interface{}, args []interface{}) {
+	switch fn.(type) {
+	case func():
+		fn.(func())()
+	case func([]interface{}):
+		fn.(func([]interface{}))(args)
+	case func(...interface{}):
+		fn.(func(...interface{}))(args...)
+	default:
+	}
 }
 
 /*
