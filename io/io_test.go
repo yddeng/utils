@@ -11,11 +11,22 @@ type Info struct {
 	Name string
 }
 
-func TestDecodeJsonFile(t *testing.T) {
-	var infos = []Info{}
-	err := io.DecodeJsonFile("./file/config.json", &infos)
-	fmt.Println(infos, err)
+func Test_Json(t *testing.T) {
+	var ret = []Info{{ID: 1, Name: "11"}, {ID: 2, Name: "22"}}
+	err := io.EncodeJsonToFile(&ret, "./file/config.json")
+	fmt.Println(ret, err)
 
-	err = io.WriteString("./", "out.txt", "out")
-	fmt.Println(err)
+	var infos []Info
+	err = io.DecodeJsonFromFile(&infos, "./file/config.json")
+	fmt.Println(infos, err)
+}
+
+func Test_Gob(t *testing.T) {
+	var ret = []Info{{ID: 1, Name: "11"}, {ID: 2, Name: "22"}}
+	err := io.StoreGob(&ret, "./file/config.gob")
+	fmt.Println(ret, err)
+
+	var infos []Info
+	err = io.LoadGob(&infos, "./file/config.gob")
+	fmt.Println(infos, err)
 }
