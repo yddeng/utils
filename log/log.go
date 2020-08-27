@@ -16,7 +16,6 @@ const (
 	INFO               // INFO  用户级重要信息
 	WARN               // WARN  用户级警告信息
 	ERROR              // ERROR 用户级错误信息
-	FATAL
 )
 
 const (
@@ -38,7 +37,6 @@ var (
 		"[INFO] ",
 		"[WARN] ",
 		"[ERROR]",
-		"[FATAL]",
 	}
 
 	defOutLevel = map[Level]struct{}{
@@ -47,7 +45,6 @@ var (
 		INFO:  {},
 		WARN:  {},
 		ERROR: {},
-		FATAL: {},
 	}
 
 	stdOut     = true //控制台输出,默认开启
@@ -335,14 +332,4 @@ func (l *Logger) Errorln(v ...interface{}) {
 
 func (l *Logger) Errorf(format string, v ...interface{}) {
 	l.output(ERROR, format, v...)
-}
-
-func (l *Logger) Fataln(v ...interface{}) {
-	l.output(FATAL, "", v...)
-	os.Exit(1)
-}
-
-func (l *Logger) Fatalf(format string, v ...interface{}) {
-	l.output(FATAL, format, v...)
-	os.Exit(1)
 }

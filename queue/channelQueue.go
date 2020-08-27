@@ -2,42 +2,37 @@ package queue
 
 import (
 	"fmt"
-	"sync"
+	"sync/atomic"
 )
 
 type ChannelQueue struct {
 	channel  chan interface{}
 	fullSize int
-	opened   bool
-	mtx      sync.Mutex
+	opened   int32
+}
+
+func (cq *ChannelQueue) open() bool {
+	return atomic.LoadInt32(&cq.opened) == 1
 }
 
 // 阻塞投递
 func (cq *ChannelQueue) PushB(e interface{}) error {
-	cq.mtx.Lock()
-	if !cq.opened {
-		cq.mtx.Unlock()
+	if !cq.open() {
 		return fmt.Errorf("channel queue closed")
 	}
-	cq.mtx.Unlock()
-
 	cq.channel <- e
 	return nil
 }
 
 // 非阻塞投递
 func (cq *ChannelQueue) PushN(e interface{}) error {
-	cq.mtx.Lock()
-	if !cq.opened {
-		cq.mtx.Unlock()
+	if !cq.open() {
 		return fmt.Errorf("channel queue closed")
 	}
 
 	if len(cq.channel) == cq.fullSize {
-		cq.mtx.Unlock()
 		return fmt.Errorf("channel queue fullSize")
 	}
-	cq.mtx.Unlock()
 
 	cq.channel <- e
 	return nil
@@ -55,17 +50,12 @@ func (cq *ChannelQueue) PopN() (interface{}, bool) {
 		elem, b := <-cq.channel
 		return elem, b
 	} else {
-		cq.mtx.Lock()
-		opened := cq.opened
-		cq.mtx.Unlock()
-		return nil, opened
+		return nil, cq.open()
 	}
 }
 
 func (cq *ChannelQueue) Close() {
-	cq.mtx.Lock()
-	defer cq.mtx.Unlock()
-	cq.opened = false
+	atomic.StoreInt32(&cq.opened, 0)
 	close(cq.channel)
 }
 
@@ -78,7 +68,6 @@ func NewChannelQueue(fullSize ...int) *ChannelQueue {
 	return &ChannelQueue{
 		channel:  make(chan interface{}, size),
 		fullSize: size,
-		mtx:      sync.Mutex{},
-		opened:   true,
+		opened:   1,
 	}
 }

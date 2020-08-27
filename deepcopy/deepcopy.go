@@ -2,118 +2,82 @@ package deepcopy
 
 import (
 	"reflect"
-	"time"
 )
 
-// Interface for delegating copy process to type
-type Interface interface {
-	DeepCopy() interface{}
-}
-
-// Iface is an alias to Copy; this exists for backwards compatibility reasons.
-func Iface(iface interface{}) interface{} {
-	return Copy(iface)
-}
-
-// Copy creates a deep copy of whatever is passed to it and returns the copy
-// in an interface{}.  The returned value will need to be asserted to the
-// correct type.
-func Copy(src interface{}) interface{} {
-	if src == nil {
-		return nil
-	}
-
-	// Make the interface a reflect.Value
-	original := reflect.ValueOf(src)
-
-	// Make a copy of the same type as the original.
-	cpy := reflect.New(original.Type()).Elem()
-
-	// Recursively copy the original.
-	copyRecursive(original, cpy)
-
-	// Return the copy as an interface.
-	return cpy.Interface()
-}
-
-// copyRecursive does the actual copying of the interface. It currently has
-// limited support for what it can handle. Add as needed.
-func copyRecursive(original, cpy reflect.Value) {
-	// check for implement deepcopy.Interface
-	if original.CanInterface() {
-		if copier, ok := original.Interface().(Interface); ok {
-			cpy.Set(reflect.ValueOf(copier.DeepCopy()))
-			return
-		}
-	}
-
-	// handle according to original's Kind
-	switch original.Kind() {
-	case reflect.Ptr:
-		// Get the actual value being pointed to.
-		originalValue := original.Elem()
-
-		// if  it isn't valid, return.
-		if !originalValue.IsValid() {
-			return
-		}
-		cpy.Set(reflect.New(originalValue.Type()))
-		copyRecursive(originalValue, cpy.Elem())
-
+func deepCopy(dst, src reflect.Value) {
+	switch src.Kind() {
 	case reflect.Interface:
-		// If this is a nil, don't do anything
-		if original.IsNil() {
+		value := src.Elem()
+		if !value.IsValid() {
 			return
 		}
-		// Get the value for the interface, not the pointer.
-		originalValue := original.Elem()
-
-		// Get the value by calling Elem().
-		copyValue := reflect.New(originalValue.Type()).Elem()
-		copyRecursive(originalValue, copyValue)
-		cpy.Set(copyValue)
-
-	case reflect.Struct:
-		t, ok := original.Interface().(time.Time)
-		if ok {
-			cpy.Set(reflect.ValueOf(t))
+		newValue := reflect.New(value.Type()).Elem()
+		deepCopy(newValue, value)
+		dst.Set(newValue)
+	case reflect.Ptr:
+		value := src.Elem()
+		if !value.IsValid() {
 			return
 		}
-		// Go through each field of the struct and copy it.
-		for i := 0; i < original.NumField(); i++ {
-			// The Type's StructField for a given field is checked to see if StructField.PkgPath
-			// is set to determine if the field is exported or not because CanSet() returns false
-			// for settable fields.  I'm not sure why.  -mohae
-			if original.Type().Field(i).PkgPath != "" {
-				continue
-			}
-			copyRecursive(original.Field(i), cpy.Field(i))
-		}
-
-	case reflect.Slice:
-		if original.IsNil() {
-			return
-		}
-		// Make a new slice and copy each element.
-		cpy.Set(reflect.MakeSlice(original.Type(), original.Len(), original.Cap()))
-		for i := 0; i < original.Len(); i++ {
-			copyRecursive(original.Index(i), cpy.Index(i))
-		}
-
+		dst.Set(reflect.New(value.Type()))
+		deepCopy(dst.Elem(), value)
 	case reflect.Map:
-		if original.IsNil() {
-			return
+		dst.Set(reflect.MakeMap(src.Type()))
+		keys := src.MapKeys()
+		for _, key := range keys {
+			value := src.MapIndex(key)
+			newValue := reflect.New(value.Type()).Elem()
+			deepCopy(newValue, value)
+			dst.SetMapIndex(key, newValue)
 		}
-		cpy.Set(reflect.MakeMap(original.Type()))
-		for _, key := range original.MapKeys() {
-			originalValue := original.MapIndex(key)
-			copyValue := reflect.New(originalValue.Type()).Elem()
-			copyRecursive(originalValue, copyValue)
-			copyKey := Copy(key.Interface())
-			cpy.SetMapIndex(reflect.ValueOf(copyKey), copyValue)
+	case reflect.Slice:
+		dst.Set(reflect.MakeSlice(src.Type(), src.Len(), src.Cap()))
+		for i := 0; i < src.Len(); i++ {
+			deepCopy(dst.Index(i), src.Index(i))
 		}
-
+	case reflect.Struct:
+		typeSrc := src.Type()
+		for i := 0; i < src.NumField(); i++ {
+			value := src.Field(i)
+			tag := typeSrc.Field(i).Tag
+			if value.CanSet() && tag.Get("deepcopy") != "-" {
+				deepCopy(dst.Field(i), value)
+			}
+		}
 	default:
-		cpy.Set(original)
+		dst.Set(src)
 	}
+}
+
+func DeepCopy(dst, src interface{}) {
+	typeDst := reflect.TypeOf(dst)
+	typeSrc := reflect.TypeOf(src)
+	if typeDst != typeSrc {
+		panic("DeepCopy: " + typeDst.String() + " != " + typeSrc.String())
+	}
+	if typeSrc.Kind() != reflect.Ptr {
+		panic("DeepCopy: pass arguments by address")
+	}
+
+	valueDst := reflect.ValueOf(dst).Elem()
+	valueSrc := reflect.ValueOf(src).Elem()
+	if !valueDst.IsValid() || !valueSrc.IsValid() {
+		panic("DeepCopy: invalid arguments")
+	}
+
+	deepCopy(valueDst, valueSrc)
+}
+
+func DeepClone(v interface{}) interface{} {
+	dst := reflect.New(reflect.TypeOf(v)).Elem()
+	deepCopy(dst, reflect.ValueOf(v))
+	return dst.Interface()
+}
+
+//是否扩展类型
+func IsStructType(k reflect.Kind) bool {
+	if k >= reflect.Array && k != reflect.String {
+		return true
+	}
+	return false
 }
