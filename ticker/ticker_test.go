@@ -1,24 +1,23 @@
-package ticker_test
+package ticker
 
 import (
 	"fmt"
-	"github.com/yddeng/dutil/ticker"
 	"testing"
 	"time"
 )
 
 func TestNewTicker(t *testing.T) {
 
-	ticker.RegisterOnceTicker(time.Millisecond*500, func(t time.Time) {
+	RegisterOnceTicker(time.Millisecond*500, func(t time.Time) {
 		fmt.Println("ticker1 once", t)
 	})
-	ticker.RegisterOnceTicker(time.Millisecond*1000, func(t time.Time) {
+	RegisterOnceTicker(time.Millisecond*1000, func(t time.Time) {
 		fmt.Println("ticker2 once", t)
 	})
-	ticker.RegisterRepeatTicker(time.Millisecond*1500, func(t time.Time) {
+	RegisterRepeatTicker(time.Millisecond*1500, func(t time.Time) {
 		fmt.Println("ticker3 repeat", t)
 	})
-	ticker4 := ticker.RegisterRepeatTicker(time.Millisecond*1000, func(t time.Time) {
+	ticker4 := RegisterRepeatTicker(time.Millisecond*1000, func(t time.Time) {
 		fmt.Println("ticker4 repeat", t)
 	})
 

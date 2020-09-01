@@ -1,11 +1,10 @@
 /*
  *
  */
-package orderMap_test
+package orderMap
 
 import (
 	"fmt"
-	"github.com/yddeng/dutil/orderMap"
 	"reflect"
 	"testing"
 )
@@ -16,7 +15,7 @@ type TT struct {
 }
 
 func TestNew(t *testing.T) {
-	oMap := orderMap.New()
+	oMap := New()
 	fmt.Println(oMap.Store(int32(1), &TT{ID: 1, S: "11"}))
 	fmt.Println(oMap.Store(int32(2), &TT{ID: 2, S: "22"}))
 	fmt.Println(oMap.Store(int32(3), &TT{ID: 3, S: "33"}))

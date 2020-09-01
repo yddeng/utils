@@ -1,15 +1,14 @@
-package buffer_test
+package buffer
 
 import (
 	"fmt"
-	dbuffer "github.com/yddeng/dutil/buffer"
 	"testing"
 )
 
 func TestNewBuffer(t *testing.T) {
 	fmt.Println("start")
 
-	buffer := &dbuffer.Buffer{}
+	buffer := &Buffer{}
 	buffer.Write([]byte{0, 5, 4, 5, 6, 1, 3, 1})
 	fmt.Println(buffer.Bytes(), buffer.Len())
 

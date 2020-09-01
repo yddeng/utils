@@ -1,8 +1,7 @@
-package heap_test
+package heap
 
 import (
 	"fmt"
-	"github.com/yddeng/dutil/heap"
 	"testing"
 )
 
@@ -11,12 +10,12 @@ type HElement struct {
 	value int
 }
 
-func (e *HElement) Less(h heap.Element) bool {
+func (e *HElement) Less(h Element) bool {
 	return e.value < h.(*HElement).value
 }
 
 func TestNewMinHeap(t *testing.T) {
-	h := heap.NewHeap()
+	h := NewHeap()
 	h.Push(&HElement{name: "e1", value: 5})
 	h.Push(&HElement{name: "e2", value: 12})
 	h.Push(&HElement{name: "e3", value: 8})

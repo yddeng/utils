@@ -1,11 +1,10 @@
 /*
  *
  */
-package bar_test
+package bar
 
 import (
 	"fmt"
-	"github.com/yddeng/dutil/bar"
 	"math/rand"
 	"testing"
 	"time"
@@ -16,7 +15,7 @@ func TestNewBar(t *testing.T) {
 	c := make(chan struct{})
 	fmt.Println("bar bar")
 	total := 10000
-	b := bar.NewBar("bar", total)
+	b := NewBar("bar", total)
 	go func() {
 		for i := 0; i < total; {
 			count := rand.Int() % 10
@@ -29,7 +28,7 @@ func TestNewBar(t *testing.T) {
 	}()
 
 	<-c
-	b1 := bar.NewBar("bar1", total)
+	b1 := NewBar("bar1", total)
 	go func() {
 		for i := 0; i < total; {
 			count := rand.Int() % 10
