@@ -92,18 +92,18 @@ func (b *Buffer) Read(p []byte) (n int, err error) {
 const MinRead = 512
 
 // 只读一次，512 字节
-func (b *Buffer) ReadFrom(reader io.Reader) (n int, e error) {
+func (b *Buffer) ReadFrom(reader io.Reader) (int64, error) {
 	b.Grow(MinRead)
-	n, e = reader.Read(b.buf[b.woff:])
+	n, e := reader.Read(b.buf[b.woff:])
 	if n < 0 {
 		panic(errNegativeRead)
 	}
 
 	b.woff += n
-	return
+	return int64(n), e
 }
 
-func (b *Buffer) ReadAllFrom(reader io.Reader) (n int, e error) {
+func (b *Buffer) ReadAllFrom(reader io.Reader) (n int64, e error) {
 	for {
 		m, err := b.ReadFrom(reader)
 		if m > 0 {
@@ -126,24 +126,23 @@ func (b *Buffer) Write(p []byte) (n int, err error) {
 	return
 }
 
-func (b *Buffer) WriteTo(w io.Writer) (n int, err error) {
+func (b *Buffer) WriteTo(w io.Writer) (int64, error) {
 	if nBytes := b.Len(); nBytes > 0 {
-		n, err = w.Write(b.buf[b.roff:b.woff])
+		n, err := w.Write(b.buf[b.roff:b.woff])
 		if n > nBytes {
 			panic("bytes.Buffer.WriteTo: invalid Write count")
 		}
 		b.roff += n
 		if err != nil {
-			return
+			return int64(n), err
 		}
 
 		if n != nBytes {
 			err = io.ErrShortWrite
-			return
+			return int64(n), err
 		}
 	}
-
-	return
+	return 0, nil
 }
 
 func (b *Buffer) WriteUint8BE(num uint8) {
