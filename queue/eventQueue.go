@@ -12,15 +12,16 @@ type event struct {
 }
 
 type EventQueue struct {
-	queue      *ChannelQueue
+	fullSize   int
+	inQueue    *ChannelQueue
 	routineCnt int32 //执行队列的携程数量，等于0时表示没有启动
 }
 
 func NewEventQueue(size int) *EventQueue {
 	e := &EventQueue{
-		queue: NewChannelQueue(size),
+		fullSize: size,
+		inQueue:  NewChannelQueue(size),
 	}
-
 	return e
 }
 
@@ -41,7 +42,7 @@ func (e *EventQueue) Push(fn interface{}, args ...interface{}) error {
 	if err != nil {
 		return err
 	}
-	return e.queue.PushB(event)
+	return e.inQueue.PushB(event)
 }
 
 func (e *EventQueue) Stop() {
@@ -49,7 +50,7 @@ func (e *EventQueue) Stop() {
 		return
 	}
 
-	e.queue.Close()
+	e.inQueue.Close()
 	atomic.StoreInt32(&e.routineCnt, 0)
 }
 
@@ -71,7 +72,7 @@ func (e *EventQueue) Run(routineCnt int) {
 	for i := 0; i < count; i++ {
 		go func() {
 			for {
-				ele, opened := e.queue.PopB()
+				ele, opened := e.inQueue.PopB()
 				if !opened {
 					return
 				}
@@ -95,8 +96,3 @@ func pcall1(fn interface{}, args []interface{}) {
 	default:
 	}
 }
-
-/*
- 如何保证同一个客户端的消息的顺序处理？
- 把不同的client hash到不同的逻辑线程上，今后来自该客户端的所有的消息都由该逻辑线程来处理，这就保证了顺序
-*/

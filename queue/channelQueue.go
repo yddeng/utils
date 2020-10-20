@@ -59,15 +59,10 @@ func (cq *ChannelQueue) Close() {
 	close(cq.channel)
 }
 
-func NewChannelQueue(fullSize ...int) *ChannelQueue {
-	size := 1024
-	if len(fullSize) > 0 {
-		size = fullSize[0]
-	}
-
+func NewChannelQueue(fullSize int) *ChannelQueue {
 	return &ChannelQueue{
-		channel:  make(chan interface{}, size),
-		fullSize: size,
+		channel:  make(chan interface{}, fullSize),
+		fullSize: fullSize,
 		opened:   1,
 	}
 }

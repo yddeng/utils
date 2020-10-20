@@ -66,7 +66,7 @@ func (b *Buffer) Clear() {
 // 清理已读数据，保留未读
 func (b *Buffer) Reset() {
 	if b.roff != 0 {
-		b.buf = b.buf[b.roff:]
+		copy(b.buf, b.buf[b.roff:b.woff])
 		b.woff = b.woff - b.roff
 		b.roff = 0
 	}
