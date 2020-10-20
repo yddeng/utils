@@ -1,7 +1,7 @@
 /*
  *
  */
-package dstring
+package dutil
 
 import (
 	"bytes"

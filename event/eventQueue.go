@@ -1,48 +1,34 @@
-package queue
+package event
 
 import (
-	"fmt"
-	"reflect"
+	"github.com/yddeng/dutil/queue"
 	"sync/atomic"
 )
 
-type event struct {
-	args []interface{}
-	fn   interface{}
-}
-
 type EventQueue struct {
 	fullSize   int
-	inQueue    *ChannelQueue
+	inQueue    *queue.ChannelQueue
 	routineCnt int32 //执行队列的携程数量，等于0时表示没有启动
 }
 
 func NewEventQueue(size int) *EventQueue {
 	e := &EventQueue{
 		fullSize: size,
-		inQueue:  NewChannelQueue(size),
+		inQueue:  queue.NewChannelQueue(size),
 	}
 	return e
 }
 
-func preparePost(fn interface{}, args ...interface{}) (*event, error) {
-	e := &event{fn: fn}
-	switch fn.(type) {
-	case func():
-	case func([]interface{}), func(...interface{}):
-		e.args = args
-	default:
-		return nil, fmt.Errorf("invaild callback type %s", reflect.TypeOf(fn).String())
-	}
-	return e, nil
-}
-
 func (e *EventQueue) Push(fn interface{}, args ...interface{}) error {
-	event, err := preparePost(fn, args...)
+	event_, err := NewEvent(fn, args...)
 	if err != nil {
 		return err
 	}
-	return e.inQueue.PushB(event)
+	return e.inQueue.PushB(event_)
+}
+
+func (e *EventQueue) PushEvent(event_ EventI) error {
+	return e.inQueue.PushB(event_)
 }
 
 func (e *EventQueue) Stop() {
@@ -77,22 +63,10 @@ func (e *EventQueue) Run(routineCnt int) {
 					return
 				}
 
-				event_ := ele.(*event)
-				pcall1(event_.fn, event_.args)
+				event_ := ele.(EventI)
+				event_.Call()
 			}
 		}()
 	}
 
-}
-
-func pcall1(fn interface{}, args []interface{}) {
-	switch fn.(type) {
-	case func():
-		fn.(func())()
-	case func([]interface{}):
-		fn.(func([]interface{}))(args)
-	case func(...interface{}):
-		fn.(func(...interface{}))(args...)
-	default:
-	}
 }

@@ -1,9 +1,8 @@
 package pool
 
 import (
-	"fmt"
+	"github.com/yddeng/dutil/event"
 	"github.com/yddeng/dutil/queue"
-	"reflect"
 	"sync"
 )
 
@@ -27,12 +26,13 @@ func NewTreadPool(threadMaxCount, channelSize int) *ThreadPool {
 	}
 }
 
-func (p *ThreadPool) AddTask(fn func(), args ...interface{}) error {
-	event_, err := preparePost(fn, args...)
+func (p *ThreadPool) AddTask(fn interface{}, args ...interface{}) error {
+	event_, err := event.NewEvent(fn, args...)
 	if err != nil {
 		return err
 	}
 	_ = p.taskQueue.PushB(event_)
+
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 	p.taskCount++
@@ -61,40 +61,11 @@ func (p *ThreadPool) newTread() {
 		p.taskCount--
 		p.mtx.Unlock()
 
-		event_ := ele.(*event)
-		pcall(event_.fn, event_.args)
+		event_ := ele.(*event.Event)
+		event_.Call()
 
 	}
 	p.mtx.Lock()
 	p.taskCount--
 	p.mtx.Unlock()
-}
-
-type event struct {
-	args []interface{}
-	fn   interface{}
-}
-
-func preparePost(fn interface{}, args ...interface{}) (*event, error) {
-	e := &event{fn: fn}
-	switch fn.(type) {
-	case func():
-	case func([]interface{}), func(...interface{}):
-		e.args = args
-	default:
-		return nil, fmt.Errorf("invaild callback type %s", reflect.TypeOf(fn).String())
-	}
-	return e, nil
-}
-
-func pcall(fn interface{}, args []interface{}) {
-	switch fn.(type) {
-	case func():
-		fn.(func())()
-	case func([]interface{}):
-		fn.(func([]interface{}))(args)
-	case func(...interface{}):
-		fn.(func(...interface{}))(args...)
-	default:
-	}
 }

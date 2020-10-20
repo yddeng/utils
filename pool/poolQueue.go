@@ -1,6 +1,7 @@
-package queue
+package pool
 
 import (
+	"github.com/yddeng/dutil/queue"
 	"sync"
 )
 
@@ -14,9 +15,9 @@ import (
 */
 
 type PoolQueue struct {
-	input    *BlockQueue
-	out      *BlockQueue
-	queues   []*BlockQueue
+	input    *queue.BlockQueue
+	out      *queue.BlockQueue
+	queues   []*queue.BlockQueue
 	mutex    sync.Mutex
 	queueCnt int
 	queueCap int
@@ -24,11 +25,11 @@ type PoolQueue struct {
 
 func NewPoolQueue(queueCnt, queueCap int) *PoolQueue {
 	pq := &PoolQueue{
-		queues: []*BlockQueue{},
+		queues: []*queue.BlockQueue{},
 	}
 
 	for i := 0; i < queueCnt; i++ {
-		pq.queues = append(pq.queues, NewBlockQueue(queueCap))
+		pq.queues = append(pq.queues, queue.NewBlockQueue(queueCap))
 	}
 
 	return pq
@@ -55,7 +56,7 @@ func (pq *PoolQueue) inputQueue() {
 	}
 
 	pq.queueCnt += 1
-	newQue := NewBlockQueue(pq.queueCap)
+	newQue := queue.NewBlockQueue(pq.queueCap)
 	pq.queues = append(pq.queues, newQue)
 
 	pq.input = newQue

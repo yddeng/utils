@@ -32,20 +32,6 @@ func TestNewQueue(t *testing.T) {
 
 }
 
-func TestNewEventQueue(t *testing.T) {
-	eq := NewEventQueue(2)
-
-	eq.Run(1)
-
-	fmt.Println("push 1:", eq.Push(1))
-	fmt.Println("push 2:", eq.Push(2))
-	fmt.Println("push 3:", eq.Push(3))
-
-	eq.Stop()
-	fmt.Println("push 4:", eq.Push(4))
-
-}
-
 func TestNewChannelQueue(t *testing.T) {
 	cq := NewChannelQueue(1)
 

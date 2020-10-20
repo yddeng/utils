@@ -1,4 +1,4 @@
-package queue
+package event
 
 import (
 	"sync"
