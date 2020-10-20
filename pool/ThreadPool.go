@@ -66,6 +66,6 @@ func (p *ThreadPool) newTread() {
 
 	}
 	p.mtx.Lock()
-	p.taskCount--
+	p.currentCount--
 	p.mtx.Unlock()
 }
