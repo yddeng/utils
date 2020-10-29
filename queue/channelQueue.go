@@ -5,6 +5,8 @@ import (
 	"sync/atomic"
 )
 
+var ErrQueueFull = fmt.Errorf("queue is full")
+
 type ChannelQueue struct {
 	channel  chan interface{}
 	fullSize int
@@ -18,7 +20,7 @@ func (cq *ChannelQueue) open() bool {
 // 阻塞投递
 func (cq *ChannelQueue) PushB(e interface{}) error {
 	if !cq.open() {
-		return fmt.Errorf("channel queue closed")
+		return ErrClosed
 	}
 	cq.channel <- e
 	return nil
@@ -27,11 +29,11 @@ func (cq *ChannelQueue) PushB(e interface{}) error {
 // 非阻塞投递
 func (cq *ChannelQueue) PushN(e interface{}) error {
 	if !cq.open() {
-		return fmt.Errorf("channel queue closed")
+		return ErrClosed
 	}
 
 	if len(cq.channel) == cq.fullSize {
-		return fmt.Errorf("channel queue fullSize")
+		return ErrQueueFull
 	}
 
 	cq.channel <- e

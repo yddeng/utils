@@ -3,6 +3,7 @@ package event
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
 func TestNewEvent(t *testing.T) {
@@ -30,16 +31,44 @@ func TestNewEvent(t *testing.T) {
 	}
 }
 
-func TestNewEventQueue(t *testing.T) {
+func TestNewEventQueueOne(t *testing.T) {
 	eq := NewEventQueue(2)
 
 	eq.Run(1)
 
-	fmt.Println("push 1:", eq.Push(1))
-	fmt.Println("push 2:", eq.Push(2))
-	fmt.Println("push 3:", eq.Push(3))
+	fmt.Println("push 1:", eq.Push(func() {
+		fmt.Println("1")
+	}))
+	fmt.Println("push 2:", eq.Push(func() {
+		fmt.Println("2")
+	}))
+	fmt.Println("push 3:", eq.Push(func() {
+		fmt.Println("3")
+	}))
 
 	eq.Stop()
+	time.Sleep(time.Second)
 	fmt.Println("push 4:", eq.Push(4))
+
+}
+
+func TestNewEventQueueMultiple(t *testing.T) {
+	eq := NewEventQueue(100)
+
+	eq.Run(4)
+
+	for i := 1; i <= 100; i++ {
+		k := i
+		//fmt.Println("push", k, eq.Push(func() {
+		//	fmt.Println(k)
+		//}))
+
+		eq.Push(func() {
+			fmt.Println(k)
+		})
+	}
+
+	eq.Stop()
+	time.Sleep(time.Second)
 
 }

@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	errClosed = fmt.Errorf("queue is closed")
+	ErrClosed = fmt.Errorf("queue is closed")
 )
 
 type BlockQueue struct {
@@ -24,55 +24,51 @@ func (q *BlockQueue) Push(v interface{}) error {
 	q.mutex.Lock()
 	if q.closed {
 		q.mutex.Unlock()
-		return errClosed
+		return ErrClosed
 	}
 
 	for !q.closed && q.full() {
 		q.fullC.Wait()
 		if q.closed {
 			q.mutex.Unlock()
-			return errClosed
+			return ErrClosed
 		}
 	}
+	needSignal := q.empty()
 	q.data[q.rear] = v
 	q.rear = (q.rear + 1) % q.cap
 	q.mutex.Unlock()
-	q.emptyC.Broadcast()
+
+	if needSignal {
+		q.emptyC.Broadcast()
+	}
 	return nil
 }
 
-/*
-func (q *BlockQueue) ForcePush(v interface{}) (interface{}, error) {
-	var poped interface{}
+func (q *BlockQueue) Peek() interface{} {
 	q.mutex.Lock()
-	if q.closed {
-		q.mutex.Unlock()
-		return nil,ErrClosed
+	defer q.mutex.Unlock()
+	if q.empty() {
+		return nil
 	}
-	if q.full() {
-		poped = q.data[q.front]
-		q.front = (q.front + 1) % q.cap
-	}
-	q.data[q.rear] = v
-	q.rear = (q.rear + 1) % q.cap
-	q.emptyC.Broadcast()
-
-	return poped,nil
+	return q.data[q.front]
 }
-*/
 
 func (q *BlockQueue) Pop() (ret interface{}, closed bool) {
 	q.mutex.Lock()
 	for !q.closed && q.empty() {
 		q.emptyC.Wait()
 	}
+	needSignal := q.full()
 	if q.len() > 0 {
 		ret = q.data[q.front]
 		q.front = (q.front + 1) % q.cap
 	}
 	closed = q.closed
 	q.mutex.Unlock()
-	q.fullC.Broadcast()
+	if needSignal {
+		q.fullC.Broadcast()
+	}
 	return
 }
 
@@ -81,6 +77,7 @@ func (q *BlockQueue) GetAll() (ret []interface{}, closed bool) {
 	for !q.closed && q.empty() {
 		q.emptyC.Wait()
 	}
+	needSignal := q.full()
 	if q.len() > 0 {
 		ret = []interface{}{}
 		for i := 0; i < q.len(); i++ {
@@ -92,7 +89,9 @@ func (q *BlockQueue) GetAll() (ret []interface{}, closed bool) {
 	}
 	closed = q.closed
 	q.mutex.Unlock()
-	q.fullC.Broadcast()
+	if needSignal {
+		q.fullC.Broadcast()
+	}
 	return
 }
 
@@ -102,26 +101,14 @@ func (q *BlockQueue) Len() int {
 	return q.len()
 }
 
-//
-func (q *BlockQueue) Do(f func(v interface{})) {
-	q.mutex.Lock()
-	defer q.mutex.Unlock()
-
-	length := q.len()
-	for i := 0; i < length; i++ {
-		idx := (q.front + i) % q.cap
-		f(q.data[idx])
-	}
-}
-
 func (q *BlockQueue) Close() {
 	q.mutex.Lock()
-	defer q.mutex.Unlock()
 	if q.closed {
 		return
 	}
-
 	q.closed = true
+	q.mutex.Unlock()
+
 	q.emptyC.Broadcast()
 	q.fullC.Broadcast()
 }
