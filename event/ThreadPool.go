@@ -1,7 +1,6 @@
-package pool
+package event
 
 import (
-	"github.com/yddeng/dutil/event"
 	"github.com/yddeng/dutil/queue"
 	"sync"
 )
@@ -27,7 +26,7 @@ func NewTreadPool(threadMaxCount, channelSize int) *ThreadPool {
 }
 
 func (p *ThreadPool) AddTask(fn interface{}, args ...interface{}) error {
-	event_, err := event.NewEvent(fn, args...)
+	event_, err := NewEvent(fn, args...)
 	if err != nil {
 		return err
 	}
@@ -61,7 +60,7 @@ func (p *ThreadPool) newTread() {
 		p.taskCount--
 		p.mtx.Unlock()
 
-		event_ := ele.(*event.Event)
+		event_ := ele.(*Event)
 		event_.Call()
 
 	}

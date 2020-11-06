@@ -42,23 +42,28 @@ func (cq *ChannelQueue) PushN(e interface{}) error {
 
 // 堵塞出
 func (cq *ChannelQueue) PopB() (interface{}, bool) {
-	elem, b := <-cq.channel
-	return elem, b
+	elem := <-cq.channel
+	if cq.open() {
+		return elem, true
+	} else {
+		return nil, false
+	}
 }
 
 // 非堵塞出，当队列为空时，返回nil
 func (cq *ChannelQueue) PopN() (interface{}, bool) {
 	if len(cq.channel) > 0 {
-		elem, b := <-cq.channel
-		return elem, b
+		elem := <-cq.channel
+		return elem, cq.open()
 	} else {
 		return nil, cq.open()
 	}
 }
 
 func (cq *ChannelQueue) Close() {
-	atomic.StoreInt32(&cq.opened, 0)
-	close(cq.channel)
+	if atomic.CompareAndSwapInt32(&cq.opened, 1, 0) {
+		close(cq.channel)
+	}
 }
 
 func NewChannelQueue(fullSize int) *ChannelQueue {

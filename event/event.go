@@ -39,3 +39,6 @@ func (this *Event) Call() {
 	default:
 	}
 }
+
+type Task interface {
+}
