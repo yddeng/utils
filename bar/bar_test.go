@@ -23,7 +23,7 @@ func TestNewBar(t *testing.T) {
 			i += count
 			time.Sleep(time.Millisecond)
 		}
-		//fmt.Println("bar bar end")
+		fmt.Println("bar bar end")
 		c <- struct{}{}
 	}()
 

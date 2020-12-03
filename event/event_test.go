@@ -34,7 +34,7 @@ func TestNewEvent(t *testing.T) {
 func TestNewEventQueueOne(t *testing.T) {
 	eq := NewEventQueue(2)
 
-	eq.Run(1)
+	eq.Run()
 
 	fmt.Println("push 1:", eq.Push(func() {
 		fmt.Println("1")
@@ -55,7 +55,7 @@ func TestNewEventQueueOne(t *testing.T) {
 func TestNewEventQueueMultiple(t *testing.T) {
 	eq := NewEventQueue(100)
 
-	eq.Run(4)
+	eq.Run()
 
 	for i := 1; i <= 100; i++ {
 		k := i

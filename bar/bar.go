@@ -5,25 +5,38 @@ package bar
 
 import (
 	"fmt"
-	"github.com/yddeng/dutil/dstring"
 	"sync"
 	"time"
 )
 
-type Bar struct {
-	mu      sync.Mutex
-	name    string
-	total   int
-	current int
+var (
+	ts = []string{"b", "Kb", "Mb", "Gb"}
+)
 
-	add      int
-	lastTime time.Time
-	userTime float64
-	done     chan struct{}
+// 字节长度格式化输出
+// 例：2566b -> 2.50Kb
+func byteSize(b int) string {
+	n := float64(b)
+	i := 0
+	for n > 1024 {
+		n /= 1024
+		i++
+		if i == len(ts) {
+			break
+		}
+	}
+	return fmt.Sprintf("%.2f%s", n, ts[i])
+}
+
+type Bar struct {
+	mu        sync.Mutex
+	name      string
+	total     int
+	current   int
+	startTime time.Time
 }
 
 var (
-	tickDur  = time.Millisecond * 100
 	barWidth = 50 //进度条宽度
 	lbarChar string
 	rbarChar string
@@ -38,72 +51,43 @@ func init() {
 
 func NewBar(name string, total int) *Bar {
 	if total <= 0 {
-		return nil
+		panic("total <= 0")
 	}
-
-	now := time.Now()
-	bar := &Bar{
-		name:     name,
-		total:    total,
-		lastTime: now,
-		done:     make(chan struct{}),
+	return &Bar{
+		name:      name,
+		total:     total,
+		startTime: time.Now(),
 	}
-
-	go bar.run()
-
-	return bar
 }
 
 func (b *Bar) Add(count int) {
-
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
+	now := time.Now()
 	b.current += count
-	b.add += count
-
-}
-
-func (b *Bar) run() {
-	ticker := time.NewTicker(tickDur)
-	for {
-		select {
-		case now := <-ticker.C:
-			b.print(now)
-		case <-b.done:
-			ticker.Stop()
-			return
-		}
-	}
-}
-
-func (b *Bar) print(now time.Time) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	tmp := "%s [%s%s][%s:%.2fs] %s " //name, lbar, rbar, rate, speed
-
 	rate := b.current * 100 / b.total
+	subTime := now.Sub(b.startTime)
+	speed := int(float64(b.current)/float64(subTime.Milliseconds())) * 1000
+	if speed < 0 {
+		speed = 0
+	}
+
+	tmp := "%s [%s%s]%s %s " //name, lbar, rbar, rate, speed
 	lbw := barWidth * b.current / b.total
 	rbw := barWidth - lbw
-	subTime := now.Sub(b.lastTime).Seconds()
-	speed := int(float64(b.add) / subTime)
-	b.userTime += subTime
-
 	var lbar, rbar = "", ""
-	lbar = string(lbarChar[:lbw])
+	lbar = lbarChar[:lbw]
 	if rbw > 0 {
-		rbar = ">" + string(rbarChar[:rbw])
+		rbar = ">" + rbarChar[:rbw]
 	}
 
+	// print
 	rateStr := fmt.Sprintf("%2d%%", rate)
-	speedStr := fmt.Sprintf("%s/s", dstring.ByteSizeFromat(int64(speed)))
-	txt := fmt.Sprintf(tmp, b.name, lbar, rbar, rateStr, b.userTime, speedStr)
+	speedStr := fmt.Sprintf("%10s/s", byteSize(speed))
+	txt := fmt.Sprintf(tmp, b.name, lbar, rbar, rateStr, speedStr)
 	fmt.Printf("%s\r", txt)
-
 	if b.current >= b.total {
-		close(b.done)
+		fmt.Println()
 	}
-	b.add = 0
-	b.lastTime = now
 }
