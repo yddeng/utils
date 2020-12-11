@@ -46,7 +46,7 @@ func HttpDownload(reqUrl string, chunkNum int64) error {
 		return errors.New(fmt.Sprintf("response status code:%d ", resp.StatusCode))
 	}
 
-	fmt.Println("statusCode", resp.StatusCode, resp.Header)
+	//fmt.Println("statusCode", resp.StatusCode, resp.Header)
 	filename := getFilename(reqUrl, resp)
 	if filename == "" {
 		return errors.New("unkonw filename")
