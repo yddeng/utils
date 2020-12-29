@@ -21,14 +21,14 @@ func NewTaskQueue(fullSize int) *TaskQueue {
 
 func (e *TaskQueue) Push(fn interface{}, args ...interface{}) error {
 	if atomic.LoadInt32(&e.state) != 1 {
-		panic("eventQueue is't started")
+		panic("task: TaskQueue.Push taskQueue is't started")
 	}
 	return e.inQueue.PushB(NewFuncTask(fn, args...))
 }
 
 func (e *TaskQueue) PushTask(task Task) error {
 	if atomic.LoadInt32(&e.state) != 1 {
-		panic("eventQueue is't started")
+		panic("task: TaskQueue.Push taskQueue is't started")
 	}
 
 	return e.inQueue.PushB(task)
