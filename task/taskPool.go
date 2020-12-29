@@ -1,4 +1,4 @@
-package event
+package task
 
 import (
 	"github.com/yddeng/dutil/queue"
@@ -6,10 +6,10 @@ import (
 )
 
 /*
-   线程池。
+   任务线程池。多个线程并列消费
 */
 
-type ThreadPool struct {
+type TaskPool struct {
 	maxCount     int32
 	currentCount int32
 	taskQueue    *queue.ChannelQueue
@@ -17,20 +17,16 @@ type ThreadPool struct {
 	mtx          sync.Mutex
 }
 
-func NewTreadPool(threadMaxCount, channelSize int) *ThreadPool {
-	return &ThreadPool{
+func NewTaskPool(threadMaxCount, channelSize int) *TaskPool {
+	return &TaskPool{
 		currentCount: 0,
 		maxCount:     int32(threadMaxCount),
 		taskQueue:    queue.NewChannelQueue(channelSize),
 	}
 }
 
-func (p *ThreadPool) AddTask(fn interface{}, args ...interface{}) error {
-	event_, err := NewEvent(fn, args...)
-	if err != nil {
-		return err
-	}
-	_ = p.taskQueue.PushB(event_)
+func (p *TaskPool) AddTask(fn interface{}, args ...interface{}) error {
+	_ = p.taskQueue.PushB(NewFuncTask(fn, args...))
 
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
@@ -42,7 +38,7 @@ func (p *ThreadPool) AddTask(fn interface{}, args ...interface{}) error {
 	return nil
 }
 
-func (p *ThreadPool) newTread() {
+func (p *TaskPool) newTread() {
 	for {
 		p.mtx.Lock()
 		if p.taskCount == 0 {
@@ -60,8 +56,8 @@ func (p *ThreadPool) newTread() {
 		p.taskCount--
 		p.mtx.Unlock()
 
-		event_ := ele.(*Event)
-		event_.Call()
+		task := ele.(Task)
+		_, _ = task.Do()
 
 	}
 	p.mtx.Lock()

@@ -1,45 +1,33 @@
 package asynwarp
 
 import (
+	"github.com/yddeng/dutil/callFunc"
 	"reflect"
 )
 
-func WrapFunc(oriFunc interface{}) func(callback func([]interface{}), args ...interface{}) {
+type wrapFunc func(callback interface{}, args ...interface{})
+
+func WrapFunc(oriFunc interface{}) wrapFunc {
 	oriF := reflect.ValueOf(oriFunc)
 
 	if oriF.Kind() != reflect.Func {
-		return nil
+		panic("asynwarp: WrapFunc oriFunc is not a func")
 	}
-	fnType := reflect.TypeOf(oriF)
 
-	return func(callback func([]interface{}), args ...interface{}) {
+	return func(callback interface{}, args ...interface{}) {
 		f := func() {
-			var in []reflect.Value
-			numIn := fnType.NumIn()
-			if numIn > 0 {
-				in = make([]reflect.Value, numIn)
-				for i := 0; i < numIn; i++ {
-					if i >= len(args) || args[i] == nil {
-						in[i] = reflect.Zero(fnType.In(i))
-					} else {
-						in[i] = reflect.ValueOf(args[i])
-					}
-				}
+			out, err := callFunc.CallFunc(oriFunc, args...)
+			if err != nil {
+				panic(err)
 			}
 
-			out := oriF.Call(in)
-
 			if len(out) > 0 {
-				ret := make([]interface{}, len(out))
-				for i, v := range out {
-					ret[i] = v.Interface()
-				}
 				if nil != callback {
-					callback(ret)
+					callFunc.CallFunc(oriFunc, out...)
 				}
 			} else {
 				if nil != callback {
-					callback(nil)
+					callFunc.CallFunc(oriFunc)
 				}
 			}
 		}
