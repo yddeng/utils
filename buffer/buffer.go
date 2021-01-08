@@ -39,8 +39,8 @@ func (b *Buffer) grow(n int) {
 	buf := make([]byte, newCap)
 	copy(buf, b.buf[b.roff:b.woff])
 	b.buf = buf
-	b.roff = 0
 	b.woff = b.Len()
+	b.roff = 0
 
 }
 
