@@ -43,7 +43,7 @@ func newWheelTimer(d time.Duration, repeated bool, ctx interface{}, f func(ctx i
 
 func (t *WheelTimer) Reset(d time.Duration) bool {
 	if t.mgr == nil {
-		panic("timer: Reset called on uninitialized HeapTimer")
+		panic("timer: Reset called on uninitialized WheelTimer")
 	}
 
 	if atomic.LoadInt32(&t.stopped) == 1 {

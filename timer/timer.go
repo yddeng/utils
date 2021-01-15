@@ -58,3 +58,11 @@ func when(d time.Duration) int64 {
 	}
 	return t
 }
+
+type TimerMgr interface {
+	// 一次性定时器
+	OnceTimer(d time.Duration, ctx interface{}, f func(ctx interface{})) Timer
+
+	// 重复定时器
+	RepeatTimer(d time.Duration, ctx interface{}, f func(ctx interface{})) Timer
+}
