@@ -23,11 +23,11 @@ func WrapFunc(oriFunc interface{}) wrapFunc {
 
 			if len(out) > 0 {
 				if nil != callback {
-					callFunc.CallFunc(oriFunc, out...)
+					callFunc.CallFunc(callback, out...)
 				}
 			} else {
 				if nil != callback {
-					callFunc.CallFunc(oriFunc)
+					callFunc.CallFunc(callback)
 				}
 			}
 		}

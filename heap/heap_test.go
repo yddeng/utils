@@ -23,12 +23,12 @@ func TestNewMinHeap(t *testing.T) {
 	h.Push(e4)
 	fmt.Println(h.Peek())
 
-	e4.value = 10
+	e4.value = 2
 	h.Fix(e4)
-	fmt.Println(h.Peek())
+	fmt.Println(h.Peek(), h.In(e4))
 
 	h.Remove(e4)
-	fmt.Println(h.Peek())
+	fmt.Println(h.Peek(), h.In(e4))
 
 	fmt.Println(h.Pop())
 	fmt.Println(h.Pop())
