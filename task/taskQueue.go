@@ -47,7 +47,7 @@ func (e *TaskQueue) Run() {
 
 	go func() {
 		for {
-			ele, opened := e.inQueue.PopB()
+			ele, opened := e.inQueue.Pop()
 			if !opened {
 				return
 			}

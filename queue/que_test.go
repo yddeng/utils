@@ -41,12 +41,18 @@ func TestNewChannelQueue(t *testing.T) {
 	go func() {
 		for {
 			time.Sleep(time.Millisecond * 100)
-			elem, b := cq.PopN()
+			elem, b := cq.Pop()
+			if !b {
+				break
+			}
 			fmt.Println(elem, b)
 		}
 	}()
 
 	fmt.Println(cq.PushB(2))
+
+	time.Sleep(time.Second)
+	cq.Close()
 	select {}
 }
 

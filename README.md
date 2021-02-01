@@ -5,13 +5,13 @@
 - bar 进度条
 - buffer 
 - cache
-- http
 - string
 - heap
 - io
 - log 异步日志
 - orderMap 有序的map
+- pipeline 流水线
 - protocol
 - queue
-- ticker 低精读ticker
-- timingwheel 时间轮
+- task 任务队列
+- timer

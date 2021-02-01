@@ -47,7 +47,7 @@ func (p *TaskPool) newTread() {
 		}
 		p.mtx.Unlock()
 
-		ele, opened := p.taskQueue.PopB()
+		ele, opened := p.taskQueue.Pop()
 		if !opened {
 			break
 		}
