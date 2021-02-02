@@ -12,16 +12,14 @@ import (
 	"unsafe"
 )
 
-var (
-	ts = []string{"b", "Kb", "Mb", "Gb"}
-)
-
 // 字节长度格式化输出
 // 例：2566b -> 2.50Kb
-func ByteSizeFromat(b int64) string {
+func ByteSizeFormat(b int64, rate int) string {
+	ts := []string{"B", "KB", "MB", "GB"}
+
 	n := float64(b)
 	i := 0
-	for n > 1024 {
+	for n > 1024 && i < len(ts) {
 		n /= 1024
 		i++
 	}
@@ -35,11 +33,6 @@ func MergeString(args ...string) string {
 		buffer.WriteString(str)
 	}
 	return buffer.String()
-}
-
-// 检查s串中是否有str子串
-func CheckString(s, substr string) bool {
-	return strings.Contains(s, substr)
 }
 
 // 转int
