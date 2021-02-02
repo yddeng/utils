@@ -5,28 +5,10 @@ package bar
 
 import (
 	"fmt"
+	"github.com/yddeng/dutil"
 	"sync"
 	"time"
 )
-
-var (
-	ts = []string{"b", "Kb", "Mb", "Gb"}
-)
-
-// 字节长度格式化输出
-// 例：2566b -> 2.50Kb
-func byteSize(b int) string {
-	n := float64(b)
-	i := 0
-	for n > 1024 {
-		n /= 1024
-		i++
-		if i == len(ts) {
-			break
-		}
-	}
-	return fmt.Sprintf("%.2f%s", n, ts[i])
-}
 
 type Bar struct {
 	mu        sync.Mutex
@@ -84,7 +66,7 @@ func (b *Bar) Add(count int) {
 
 	// print
 	rateStr := fmt.Sprintf("%2d%%", rate)
-	speedStr := fmt.Sprintf("%10s/s", byteSize(speed))
+	speedStr := fmt.Sprintf("%10s/s", dutil.ByteSizeFormat(int64(speed), 1024))
 	txt := fmt.Sprintf(tmp, b.name, lbar, rbar, rateStr, speedStr)
 	fmt.Printf("%s\r", txt)
 	if b.current >= b.total {
