@@ -27,7 +27,7 @@ func httpGet(reqUrl string, headers map[string]string) (*http.Response, error) {
 	return client.Do(req)
 }
 
-func HttpDownload(reqUrl string, chunkNum int64) error {
+func HttpDownload(reqUrl string, chunkNum int64,filename string) error {
 	if chunkNum <= 0 {
 		chunkNum = 1
 	}
@@ -46,8 +46,6 @@ func HttpDownload(reqUrl string, chunkNum int64) error {
 		return errors.New(fmt.Sprintf("response status code:%d ", resp.StatusCode))
 	}
 
-	//fmt.Println("statusCode", resp.StatusCode, resp.Header)
-	filename := getFilename(reqUrl, resp)
 	if filename == "" {
 		return errors.New("unkonw filename")
 	}
