@@ -302,7 +302,7 @@ func (l *Logger) output(lev Level, format string, v ...interface{}) {
 	}
 }
 
-func (l *Logger) Debugln(v ...interface{}) {
+func (l *Logger) Debug(v ...interface{}) {
 	l.output(DEBUG, "", v...)
 }
 
@@ -310,7 +310,7 @@ func (l *Logger) Debugf(format string, v ...interface{}) {
 	l.output(DEBUG, format, v...)
 }
 
-func (l *Logger) Infoln(v ...interface{}) {
+func (l *Logger) Info(v ...interface{}) {
 	l.output(INFO, "", v...)
 }
 
@@ -318,7 +318,7 @@ func (l *Logger) Infof(format string, v ...interface{}) {
 	l.output(INFO, format, v...)
 }
 
-func (l *Logger) Warnln(v ...interface{}) {
+func (l *Logger) Warn(v ...interface{}) {
 	l.output(WARN, "", v...)
 }
 
@@ -326,7 +326,7 @@ func (l *Logger) Warnf(format string, v ...interface{}) {
 	l.output(WARN, format, v...)
 }
 
-func (l *Logger) Errorln(v ...interface{}) {
+func (l *Logger) Error(v ...interface{}) {
 	l.output(ERROR, "", v...)
 }
 

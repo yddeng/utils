@@ -1,38 +1,52 @@
 package task
 
 import (
-	"github.com/yddeng/dutil/queue"
+	"errors"
+	"github.com/sniperHW/kendynet/util"
 	"sync"
+	"sync/atomic"
 )
 
-/*
-   任务线程池。多个线程并列消费
-*/
+type task struct {
+	fn   interface{}
+	args []interface{}
+}
 
 type TaskPool struct {
-	maxCount     int32
-	currentCount int32
-	taskQueue    *queue.ChannelQueue
-	taskCount    int
-	mtx          sync.Mutex
+	maxTreadCnt int32
+	crtTreadCnt int32
+	taskChan    chan *task
+	maxTaskCnt  int32
+	crtTaskCnt  int32
+	stopped     int32
+	mtx         sync.Mutex
 }
 
 func NewTaskPool(threadMaxCount, channelSize int) *TaskPool {
 	return &TaskPool{
-		currentCount: 0,
-		maxCount:     int32(threadMaxCount),
-		taskQueue:    queue.NewChannelQueue(channelSize),
+		crtTreadCnt: 0,
+		maxTreadCnt: int32(threadMaxCount),
+		taskChan:    make(chan *task, channelSize),
+		maxTaskCnt:  int32(channelSize),
 	}
 }
 
 func (p *TaskPool) AddTask(fn interface{}, args ...interface{}) error {
-	_ = p.taskQueue.PushB(NewFuncTask(fn, args...))
+	if atomic.LoadInt32(&p.stopped) == 1 {
+		return errors.New("taskPool : AddTask failed, pool is stopped")
+	}
+
+	if len(p.taskChan) == int(p.maxTaskCnt) {
+		return errors.New("taskPool : AddTask failed, task is full")
+	}
+
+	p.taskChan <- &task{fn: fn, args: args}
 
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
-	p.taskCount++
-	if p.currentCount < p.maxCount {
-		p.currentCount++
+	p.crtTaskCnt++
+	if p.crtTreadCnt < p.maxTreadCnt {
+		p.crtTreadCnt++
 		go p.newTread()
 	}
 	return nil
@@ -41,26 +55,31 @@ func (p *TaskPool) AddTask(fn interface{}, args ...interface{}) error {
 func (p *TaskPool) newTread() {
 	for {
 		p.mtx.Lock()
-		if p.taskCount == 0 {
+		if p.crtTaskCnt == 0 {
 			p.mtx.Unlock()
 			break
 		}
 		p.mtx.Unlock()
 
-		ele, opened := p.taskQueue.Pop()
+		task, opened := <-p.taskChan
 		if !opened {
 			break
 		}
 
 		p.mtx.Lock()
-		p.taskCount--
+		p.crtTaskCnt--
 		p.mtx.Unlock()
 
-		task := ele.(Task)
-		_, _ = task.Do()
+		_, _ = util.ProtectCall(task.fn, task.args)
 
 	}
 	p.mtx.Lock()
-	p.currentCount--
+	p.crtTreadCnt--
 	p.mtx.Unlock()
+}
+
+func (p *TaskPool) Stop() {
+	if atomic.CompareAndSwapInt32(&p.stopped, 0, 1) {
+		close(p.taskChan)
+	}
 }
