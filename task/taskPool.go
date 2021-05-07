@@ -36,14 +36,15 @@ func (p *TaskPool) AddTask(fn interface{}, args ...interface{}) error {
 		return errors.New("taskPool : AddTask failed, pool is stopped")
 	}
 
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+
 	if len(p.taskChan) == int(p.maxTaskCnt) {
 		return errors.New("taskPool : AddTask failed, task is full")
 	}
 
 	p.taskChan <- &task{fn: fn, args: args}
 
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
 	p.crtTaskCnt++
 	if p.crtTreadCnt < p.maxTreadCnt {
 		p.crtTreadCnt++
