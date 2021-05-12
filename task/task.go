@@ -1,7 +1,7 @@
 package task
 
 import (
-	"github.com/yddeng/dutil/callFunc"
+	"github.com/yddeng/utils/callFunc"
 )
 
 type Task interface {

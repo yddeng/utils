@@ -1,7 +1,7 @@
 package task
 
 import (
-	"github.com/yddeng/dutil/queue"
+	"github.com/yddeng/utils/queue"
 	"sync/atomic"
 )
 

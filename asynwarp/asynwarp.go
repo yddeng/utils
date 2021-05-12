@@ -1,7 +1,7 @@
 package asynwarp
 
 import (
-	"github.com/yddeng/dutil/callFunc"
+	"github.com/yddeng/utils/callFunc"
 	"reflect"
 )
 

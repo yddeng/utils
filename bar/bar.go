@@ -5,7 +5,7 @@ package bar
 
 import (
 	"fmt"
-	"github.com/yddeng/dutil"
+	"github.com/yddeng/utils"
 	"sync"
 	"time"
 )
@@ -66,7 +66,7 @@ func (b *Bar) Add(count int) {
 
 	// print
 	rateStr := fmt.Sprintf("%2d%%", rate)
-	speedStr := fmt.Sprintf("%10s/s", dutil.ByteSizeFormat(int64(speed), 1024))
+	speedStr := fmt.Sprintf("%10s/s", utils.ByteSizeFormat(int64(speed), 1024))
 	txt := fmt.Sprintf(tmp, b.name, lbar, rbar, rateStr, speedStr)
 	fmt.Printf("%s\r", txt)
 	if b.current >= b.total {

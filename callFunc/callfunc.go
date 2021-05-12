@@ -1,12 +1,12 @@
 package callFunc
 
 import (
-	"github.com/yddeng/dutil"
+	"github.com/yddeng/utils"
 	"reflect"
 )
 
 func CallFunc(fn interface{}, args ...interface{}) (result []interface{}, err error) {
-	defer func() { err = dutil.Recover() }()
+	defer func() { err = utils.Recover() }()
 
 	fnType := reflect.TypeOf(fn)
 	fnValue := reflect.ValueOf(fn)
