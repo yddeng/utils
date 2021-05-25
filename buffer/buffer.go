@@ -11,141 +11,173 @@ var ErrNotEnough = errors.New("buffer.Buffer: read length but not enough")
 var errNegativeRead = errors.New("buffer.Buffer: reader returned negative count from Read")
 
 const smallBufferSize = 64
-const maxInt = int(^uint(0) >> 1)
+const MinRead = 512
 
 type Buffer struct {
-	buf        []byte
-	roff, woff int //读、写偏移
+	r, w  int
+	buf   []byte
+	cap   int
+	empty bool
 }
 
-// 扩容 n ,如果剩余空间足够，则不扩容
-func (b *Buffer) grow(n int) {
-	if b.buf == nil || cap(b.buf) == 0 {
-		b.buf = make([]byte, smallBufferSize)
-	}
+func (b *Buffer) Empty() bool {
+	return b.empty
+}
 
-	if b.FreeLen() >= n {
-		if b.Cap()-b.woff < n {
-			b.Reset()
+func (b *Buffer) Full() bool {
+	if b.r == b.w && !b.empty {
+		return true
+	}
+	return false
+}
+
+func (b *Buffer) Clear() {
+	b.r = 0
+	b.w = 0
+	b.empty = true
+}
+
+func (b *Buffer) Len() int {
+	if b.w > b.r {
+		return b.w - b.r
+	} else if b.w < b.r {
+		return b.cap - b.r + b.w
+	} else {
+		if b.empty {
+			return 0
+		} else {
+			return b.cap
 		}
-		return
 	}
+}
 
+func (b *Buffer) Cap() int  { return b.cap }
+func (b *Buffer) Free() int { return b.Cap() - b.Len() }
+
+func (b *Buffer) Grow(n int) {
 	need := b.Len() + n
 	newCap := 2 * b.Cap()
 	for newCap < need {
 		newCap *= 2
 	}
-	buf := make([]byte, newCap)
-	b.woff = copy(buf, b.buf[b.roff:b.woff])
-	b.roff = 0
-	b.buf = buf
 
+	buf := make([]byte, newCap)
+	var num int
+	if !b.empty {
+		if b.w > b.r {
+			num = copy(buf, b.buf[b.r:b.w])
+		} else {
+			num = copy(buf, b.buf[b.r:])
+			if b.w > 0 {
+				num += copy(buf[num:], b.buf[:b.w])
+			}
+		}
+	}
+	b.cap = newCap
+	b.buf = buf
+	b.r = 0
+	b.w = num % b.cap
 }
 
-func (b *Buffer) Grow(n int) {
-	if n < 0 {
+func (b *Buffer) Read(buf []byte) (n int, err error) {
+	plen := len(buf)
+	if plen == 0 || b.empty {
 		return
 	}
-	b.grow(n)
+
+	if b.w > b.r {
+		n = copy(buf, b.buf[b.r:b.w])
+		b.r = (b.r + n) % b.cap
+	} else {
+		n = copy(buf, b.buf[b.r:])
+		b.r = (b.r + n) % b.cap
+		if plen > n && b.w > 0 {
+			b.r = copy(buf[n:], b.buf[:b.w])
+			n += b.r
+		}
+	}
+
+	if b.r == b.w {
+		b.empty = true
+	}
+	return
 }
 
-func (b *Buffer) empty() bool  { return b.Len() == 0 }
-func (b *Buffer) Len() int     { return b.woff - b.roff }
-func (b *Buffer) Cap() int     { return cap(b.buf) }
-func (b *Buffer) FreeLen() int { return b.Cap() - b.Len() }
+func (b *Buffer) Reset(n int) {
+	if n > b.Len() {
+		n = b.Len()
+	}
 
-// 清空
-func (b *Buffer) Clear() {
-	b.buf = b.buf[:0]
-	b.roff = 0
-	b.woff = 0
-}
-
-// 清理已读数据，保留未读
-func (b *Buffer) Reset() {
-	if b.roff != 0 {
-		copy(b.buf, b.buf[b.roff:b.woff])
-		b.woff = b.woff - b.roff
-		b.roff = 0
+	if n > 0 {
+		b.r = (b.r + n) % b.cap
+		if b.r == b.w {
+			b.empty = true
+		}
 	}
 }
 
 func (b *Buffer) Bytes() []byte {
-	return b.buf[b.roff:b.woff]
-}
-
-func (b *Buffer) Read(p []byte) (n int, err error) {
-	if b.empty() {
-		if len(p) == 0 {
-			return 0, nil
+	if !b.empty {
+		buf := make([]byte, b.Len())
+		if b.w > b.r {
+			copy(buf, b.buf[b.r:b.w])
+		} else {
+			n := copy(buf, b.buf[b.r:])
+			if b.w > 0 {
+				copy(buf[n:], b.buf[:b.w])
+			}
 		}
-		return 0, io.EOF
+		return buf
 	}
-
-	n = copy(p, b.buf[b.roff:b.woff])
-	b.roff += n
-	return n, nil
+	return nil
 }
-
-const MinRead = 512
 
 // 只读一次，512 字节
 func (b *Buffer) ReadFrom(reader io.Reader) (int64, error) {
-	b.Grow(MinRead)
-	n, e := reader.Read(b.buf[b.woff:])
+	free := b.Free()
+	if free == 0 {
+		return 0, nil
+	}
+
+	buf := make([]byte, free)
+	n, err := reader.Read(buf)
 	if n < 0 {
 		panic(errNegativeRead)
 	}
 
-	b.woff += n
-	return int64(n), e
+	n, _ = b.Write(buf[:n])
+	return int64(n), err
 }
 
-func (b *Buffer) ReadAllFrom(reader io.Reader) (n int64, e error) {
-	for {
-		m, err := b.ReadFrom(reader)
-		if m > 0 {
-			n += m
-		}
-		if err == io.EOF {
-			return n, nil
-		}
-		if err != nil {
-			return n, err
+func (b *Buffer) Write(buf []byte) (n int, err error) {
+	plen := len(buf)
+	if plen == 0 || (b.r == b.w && !b.empty) {
+		return
+	}
+
+	if b.w < b.r {
+		n = copy(b.buf[b.w:b.r], buf)
+		b.w = (b.w + n) % b.cap
+	} else {
+		n = copy(b.buf[b.w:], buf)
+		b.w = (b.w + n) % b.cap
+		if plen > n && b.r > 0 {
+			b.w = copy(b.buf[:b.r], buf[n:])
+			n += b.w
 		}
 	}
-}
 
-// 写入缓冲区
-func (b *Buffer) Write(p []byte) (n int, err error) {
-	b.Grow(len(p))
-	n = copy(b.buf[b.woff:], p)
-	b.woff += n
+	if n > 0 {
+		b.empty = false
+	}
 	return
 }
 
-func (b *Buffer) WriteTo(w io.Writer) (int64, error) {
-	if nBytes := b.Len(); nBytes > 0 {
-		n, err := w.Write(b.buf[b.roff:b.woff])
-		if n > nBytes {
-			panic("bytes.Buffer.WriteTo: invalid Write count")
-		}
-		b.roff += n
-		if err != nil {
-			return int64(n), err
-		}
-
-		if n != nBytes {
-			err = io.ErrShortWrite
-			return int64(n), err
-		}
+func (b *Buffer) WriteUint8BE(num uint8) (int, error) {
+	if b.Free() < 1 {
+		return 0, ErrNotEnough
 	}
-	return 0, nil
-}
-
-func (b *Buffer) WriteUint8BE(num uint8) {
-	b.Write([]byte{num})
+	return b.Write([]byte{num})
 }
 
 func (b *Buffer) ReadUint8BE() (uint8, error) {
@@ -156,10 +188,13 @@ func (b *Buffer) ReadUint8BE() (uint8, error) {
 	return num, nil
 }
 
-func (b *Buffer) WriteUint16BE(num uint16) {
+func (b *Buffer) WriteUint16BE(num uint16) (int, error) {
+	if b.Free() < 2 {
+		return 0, ErrNotEnough
+	}
 	var bt = make([]byte, 2)
 	binary.BigEndian.PutUint16(bt, num)
-	b.Write(bt)
+	return b.Write(bt)
 }
 
 func (b *Buffer) ReadUint16BE() (uint16, error) {
@@ -170,10 +205,13 @@ func (b *Buffer) ReadUint16BE() (uint16, error) {
 	return binary.BigEndian.Uint16(num), nil
 }
 
-func (b *Buffer) WriteUint32BE(num uint32) {
+func (b *Buffer) WriteUint32BE(num uint32) (int, error) {
+	if b.Free() < 4 {
+		return 0, ErrNotEnough
+	}
 	var bt = make([]byte, 4)
 	binary.BigEndian.PutUint32(bt, num)
-	b.Write(bt)
+	return b.Write(bt)
 }
 
 func (b *Buffer) ReadUint32BE() (uint32, error) {
@@ -184,10 +222,13 @@ func (b *Buffer) ReadUint32BE() (uint32, error) {
 	return binary.BigEndian.Uint32(num), nil
 }
 
-func (b *Buffer) WriteUint64BE(num uint64) {
+func (b *Buffer) WriteUint64BE(num uint64) (int, error) {
+	if b.Free() < 8 {
+		return 0, ErrNotEnough
+	}
 	var bt = make([]byte, 8)
 	binary.BigEndian.PutUint64(bt, num)
-	b.Write(bt)
+	return b.Write(bt)
 }
 
 func (b *Buffer) ReadUint64BE() (uint64, error) {
@@ -198,8 +239,8 @@ func (b *Buffer) ReadUint64BE() (uint64, error) {
 	return binary.BigEndian.Uint64(num), nil
 }
 
-func (b *Buffer) WriteBytes(data []byte) {
-	b.Write(data)
+func (b *Buffer) WriteBytes(data []byte) (int, error) {
+	return b.Write(data)
 }
 
 //获取 n 长度的数据
@@ -209,31 +250,28 @@ func (b *Buffer) ReadBytes(n int) ([]byte, error) {
 		return nil, ErrNotEnough
 	}
 
-	var data = make([]byte, n)
-	copy(data, b.buf[b.roff:b.roff+n])
-	b.roff += n
-
+	data := make([]byte, n)
+	n, _ = b.Read(data)
 	return data, nil
 }
 
 func (b *Buffer) ReadByte() (byte, error) {
-	if b.Len() == 0 {
+	if b.Empty() {
 		return 0, ErrNotEnough
 	}
 
-	ret := b.buf[b.roff]
-	b.roff++
-
-	return ret, nil
+	data := make([]byte, 1)
+	b.Read(data)
+	return data[0], nil
 }
 
-func (b *Buffer) WriteByte(c byte) {
-	b.Write([]byte{c})
+func (b *Buffer) WriteByte(c byte) (int, error) {
+	return b.Write([]byte{c})
 }
 
-func (b *Buffer) WriteString(str string) {
+func (b *Buffer) WriteString(str string) (int, error) {
 	data := *(*[]byte)(unsafe.Pointer(&str))
-	b.Write(data)
+	return b.Write(data)
 }
 
 //获取len长度的数据
@@ -248,5 +286,10 @@ func (b *Buffer) ReadString(n int) (string, error) {
 	return ret, nil
 }
 
-func NewBuffer(buf []byte) *Buffer     { return &Buffer{buf: buf, woff: len(buf)} }
-func NewBufferWithCap(cap int) *Buffer { return &Buffer{buf: make([]byte, cap)} }
+func NewBufferWithCap(size int) *Buffer {
+	return &Buffer{buf: make([]byte, size), cap: size, empty: true}
+}
+
+func NewBuffer(buf []byte) *Buffer {
+	return &Buffer{buf: buf, cap: len(buf), empty: false}
+}
