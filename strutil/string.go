@@ -76,15 +76,3 @@ func Str2bytes(s string) []byte {
 func Bytes2str(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
-
-// 将字符串按照空格分割成字符串数组
-func Str2Slice(s string) []string {
-	words := strings.Split(DeleteExtraSpace(s), " ")
-	ret := make([]string, 0, len(words))
-	for _, w := range words {
-		if w != "" {
-			ret = append(ret, w)
-		}
-	}
-	return ret
-}
