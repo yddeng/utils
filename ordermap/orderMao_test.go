@@ -1,7 +1,7 @@
 /*
  *
  */
-package orderMap
+package ordermap
 
 import (
 	"fmt"

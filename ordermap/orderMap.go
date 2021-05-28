@@ -1,4 +1,4 @@
-package orderMap
+package ordermap
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-type OrderMap struct {
+type Ordermap struct {
 	keyType    reflect.Type
 	valType    reflect.Type
 	idxToKey   []interface{}
@@ -16,8 +16,8 @@ type OrderMap struct {
 	mu         sync.Mutex
 }
 
-func New() *OrderMap {
-	o := &OrderMap{
+func New() *Ordermap {
+	o := &Ordermap{
 		idxToKey:   []interface{}{},
 		keyToIdx:   map[interface{}]int{},
 		keyToValue: map[interface{}]interface{}{},
@@ -25,14 +25,14 @@ func New() *OrderMap {
 	return o
 }
 
-func (o *OrderMap) SetType(keyType, valType reflect.Type) {
+func (o *Ordermap) SetType(keyType, valType reflect.Type) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	o.keyType = keyType
 	o.valType = valType
 }
 
-func (o *OrderMap) Store(key, val interface{}) error {
+func (o *Ordermap) Store(key, val interface{}) error {
 
 	if o.keyType != nil && o.keyType != reflect.TypeOf(key) {
 		return fmt.Errorf("invaild key type(%v), need type(%v)", reflect.TypeOf(key).String(), o.keyType.String())
@@ -50,7 +50,7 @@ func (o *OrderMap) Store(key, val interface{}) error {
 	return nil
 }
 
-func (o *OrderMap) Del(key interface{}) {
+func (o *Ordermap) Del(key interface{}) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
@@ -66,13 +66,13 @@ func (o *OrderMap) Del(key interface{}) {
 	}
 }
 
-func (o *OrderMap) Len() int {
+func (o *Ordermap) Len() int {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	return len(o.keyToValue)
 }
 
-func (o *OrderMap) LoadByIdx(idx int) (interface{}, bool) {
+func (o *Ordermap) LoadByIdx(idx int) (interface{}, bool) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	if idx < 0 || idx >= len(o.idxToKey) {
@@ -83,7 +83,7 @@ func (o *OrderMap) LoadByIdx(idx int) (interface{}, bool) {
 	return v, true
 }
 
-func (o *OrderMap) LoadByKey(key interface{}) (interface{}, bool) {
+func (o *Ordermap) LoadByKey(key interface{}) (interface{}, bool) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
@@ -96,7 +96,7 @@ func (o *OrderMap) LoadByKey(key interface{}) (interface{}, bool) {
 
 }
 
-func (o *OrderMap) Range(f func(key, value interface{}) bool) {
+func (o *Ordermap) Range(f func(key, value interface{}) bool) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
@@ -111,7 +111,7 @@ func (o *OrderMap) Range(f func(key, value interface{}) bool) {
 	}
 }
 
-func (o *OrderMap) RandOneKey() interface{} {
+func (o *Ordermap) RandOneKey() interface{} {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 

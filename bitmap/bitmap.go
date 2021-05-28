@@ -7,7 +7,6 @@ type Bitmap struct {
 	length int
 }
 
-// NewBitmap return [0, max-1]
 func New(size uint16) *Bitmap {
 	n := size / 8
 	if size%8 != 0 {
@@ -16,45 +15,45 @@ func New(size uint16) *Bitmap {
 	return &Bitmap{bits: make([]byte, n)}
 }
 
-func (this *Bitmap) Set(num uint64) bool {
+func (bm *Bitmap) Set(num uint64) bool {
 	idx, bit := num/8, num%8
-	if idx < uint64(len(this.bits)) && (this.bits[idx]&(1<<bit)) == 0 {
-		this.bits[idx] |= 1 << bit
-		this.length++
+	if idx < uint64(len(bm.bits)) && (bm.bits[idx]&(1<<bit)) == 0 {
+		bm.bits[idx] |= 1 << bit
+		bm.length++
 		return true
 	}
 	return false
 }
 
-func (this *Bitmap) Clear(num uint64) bool {
+func (bm *Bitmap) Clear(num uint64) bool {
 	idx, bit := num/8, num%8
-	if idx < uint64(len(this.bits)) && (this.bits[idx]&(1<<bit)) != 0 {
-		this.bits[idx] &^= 1 << bit
-		this.length--
+	if idx < uint64(len(bm.bits)) && (bm.bits[idx]&(1<<bit)) != 0 {
+		bm.bits[idx] &^= 1 << bit
+		bm.length--
 		return true
 	}
 	return false
 }
 
-func (this *Bitmap) Has(num uint64) bool {
+func (bm *Bitmap) Has(num uint64) bool {
 	idx, bit := num/8, num%8
-	if idx < uint64(len(this.bits)) && (this.bits[idx]&(1<<bit)) != 0 {
+	if idx < uint64(len(bm.bits)) && (bm.bits[idx]&(1<<bit)) != 0 {
 		return true
 	}
 	return false
 }
 
-func (this *Bitmap) Len() int {
-	return this.length
+func (bm *Bitmap) Len() int {
+	return bm.length
 }
 
-func (this *Bitmap) Range() (uint64, uint64) {
-	return 0, uint64(len(this.bits)*8) - 1
+func (bm *Bitmap) Cap() uint64 {
+	return uint64(len(bm.bits) * 8)
 }
 
-func (this *Bitmap) String() string {
+func (bm *Bitmap) String() string {
 	buffer := bytes.Buffer{}
-	for _, bit := range this.bits {
+	for _, bit := range bm.bits {
 		for i := 0; i < 8; i++ {
 			if bit&(1<<i) != 0 {
 				buffer.WriteString("1")
@@ -66,13 +65,13 @@ func (this *Bitmap) String() string {
 	return buffer.String()
 }
 
-func (this *Bitmap) Copy(b *Bitmap) {
+func (bm *Bitmap) Copy(b *Bitmap) {
 	min := len(b.bits)
-	if len(this.bits) < min {
-		min = len(this.bits)
+	if len(bm.bits) < min {
+		min = len(bm.bits)
 	}
 
 	for i := 0; i < min; i++ {
-		this.bits[i] = this.bits[i] | b.bits[i]
+		bm.bits[i] = bm.bits[i] | b.bits[i]
 	}
 }

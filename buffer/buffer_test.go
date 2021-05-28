@@ -8,7 +8,7 @@ import (
 func TestNewBuffer(t *testing.T) {
 	fmt.Println("start")
 
-	buffer := &Buffer{}
+	buffer := NewBufferWithCap(128)
 	buffer.Write([]byte{0, 5, 4, 5, 6, 1, 3, 1})
 	fmt.Println(buffer.Bytes(), buffer.Len())
 
