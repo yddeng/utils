@@ -7,7 +7,7 @@ type Bitmap struct {
 	length int
 }
 
-func New(size uint16) *Bitmap {
+func New(size uint64) *Bitmap {
 	n := size / 8
 	if size%8 != 0 {
 		n++
