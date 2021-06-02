@@ -124,7 +124,7 @@ func ff(args ...interface{}) {
 	f(args...)
 }
 
-func TestNewTaskQueue(t *testing.T) {
+func TestTaskQueue_Push(t *testing.T) {
 	taskQueue := NewTaskQueue(2)
 
 	taskQueue.Run()
@@ -142,4 +142,21 @@ func TestNewTaskQueue(t *testing.T) {
 	taskQueue.Stop()
 	time.Sleep(time.Second)
 	fmt.Println("push 4:", taskQueue.Push(4))
+}
+
+func TestTaskQueue_WaitPush(t *testing.T) {
+	taskQueue := NewTaskQueue(2)
+
+	taskQueue.Run()
+
+	fmt.Println("push 1:", taskQueue.WaitPush(func() {
+		fmt.Println("1")
+	}))
+	fmt.Println("push 2:", taskQueue.WaitPush(func() {
+		fmt.Println("2")
+	}))
+	fmt.Println("push 3:", taskQueue.WaitPush(func() {
+		fmt.Println("3")
+	}))
+
 }

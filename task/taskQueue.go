@@ -26,6 +26,17 @@ func (e *TaskQueue) Push(fn interface{}, args ...interface{}) error {
 	return e.inQueue.PushB(NewFuncTask(fn, args...))
 }
 
+func (e *TaskQueue) WaitPush(fn interface{}, args ...interface{}) error {
+	done := make(chan error)
+	if err := e.Push(func() {
+		NewFuncTask(fn, args...).Do()
+		done <- nil
+	}); err != nil {
+		return err
+	}
+	return <-done
+}
+
 func (e *TaskQueue) PushTask(task Task) error {
 	if atomic.LoadInt32(&e.state) != 1 {
 		panic("task: TaskQueue.Push taskQueue is't started")

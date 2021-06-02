@@ -1,7 +1,7 @@
 package task
 
 import (
-	"github.com/yddeng/utils/callFunc"
+	"github.com/yddeng/utils"
 )
 
 type Task interface {
@@ -21,5 +21,5 @@ func NewFuncTask(f interface{}, args ...interface{}) *FuncTask {
 }
 
 func (this *FuncTask) Do() (result []interface{}, err error) {
-	return callFunc.CallFunc(this.fn, this.args...)
+	return utils.CallFunc(this.fn, this.args...)
 }
