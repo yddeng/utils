@@ -61,8 +61,6 @@ type Logger struct {
 	flag   int
 	buf    []byte
 	outLev map[Level]struct{}
-
-	async  bool //异步输出，默认同步
 	logOut *OutFile
 }
 
@@ -86,14 +84,6 @@ func newLogger(basePath, fileName string, maxSize int) *Logger {
 	}
 }
 
-//开启异步输出
-func (l *Logger) AsyncOut() {
-	l.async = true
-
-	l.logOut.chCache = make(chan *message, 512)
-	go l.logOut.run()
-}
-
 //设置输出等级
 func (l *Logger) SetOutLevel(levels ...Level) {
 	if len(levels) != 0 {
@@ -108,15 +98,9 @@ type OutFile struct {
 	basePath     string
 	fileName     string
 	writer       *os.File
-	createTime   time.Time     //底层文件的创建时间
-	writeMaxSize int           //文件写入最大字节数
-	writeSize    int           //累计写入文件的字节数量
-	chCache      chan *message //异步缓存
-}
-
-type message struct {
-	now  *time.Time
-	data []byte
+	createTime   time.Time //底层文件的创建时间
+	writeMaxSize int       //文件写入最大字节数
+	writeSize    int       //累计写入文件的字节数量
 }
 
 func newOutFile(basePath, fileName string, maxSize int) *OutFile {
@@ -158,22 +142,6 @@ func (out *OutFile) checkOutFile(now *time.Time) bool {
 	}
 
 	return true
-}
-
-func (out *OutFile) flush(now *time.Time, buff []byte) {
-	data := make([]byte, len(buff))
-	copy(data, buff[:])
-	out.chCache <- &message{
-		now:  now,
-		data: data,
-	}
-}
-
-func (out *OutFile) run() {
-	for {
-		msg := <-out.chCache
-		out.write(msg.now, msg.data)
-	}
 }
 
 func (out *OutFile) write(now *time.Time, buff []byte) {
@@ -294,11 +262,8 @@ func (l *Logger) output(lev Level, format string, v ...interface{}) {
 		l.buf = append(l.buf, '\n')
 	}
 
-	if l.async {
-		l.logOut.flush(&now, l.buf)
-	} else {
-		l.logOut.write(&now, l.buf)
-	}
+	l.logOut.write(&now, l.buf)
+
 }
 
 func (l *Logger) Debug(v ...interface{}) {

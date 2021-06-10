@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 )
 
+const minChannelSize = 1024
+
 type task struct {
 	fn   interface{}
 	args []interface{}
@@ -23,6 +25,9 @@ type TaskPool struct {
 }
 
 func NewTaskPool(threadMaxCount, channelSize int) *TaskPool {
+	if channelSize < minChannelSize {
+		channelSize = minChannelSize
+	}
 	return &TaskPool{
 		crtTreadCnt: 0,
 		maxTreadCnt: int32(threadMaxCount),
