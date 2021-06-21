@@ -1,55 +1,82 @@
 package log
 
-var logger *Logger
+import (
+	"fmt"
+	"os"
+)
 
-func InitLogger(l *Logger) {
-	logger = l
+/*
+   全局默认提供一个Logger对外句柄，可以直接使用API系列调用
+   全局日志对象 stdOut
+*/
+var defaultLogger = NewLogger(".", "")
+
+func Default() *Logger { return defaultLogger }
+
+func SetOutput(basePath, fileName string, maxSize ...int) {
+	defaultLogger.SetOutput(basePath, fileName, maxSize...)
+}
+
+func SetFlags(flag int) {
+	defaultLogger.SetFlags(flag)
+}
+
+func CloseDebug() { defaultLogger.CloseDebug() }
+
+func CloseStdOut() { defaultLogger.CloseStdOut() }
+
+func SetPrefix(prefix string) {
+	defaultLogger.SetPrefix(prefix)
 }
 
 func Debug(v ...interface{}) {
-	if logger != nil {
-		logger.output(DEBUG, "", v...)
+	if !defaultLogger.closeDebug {
+		defaultLogger.output(DEBUG, "", v...)
 	}
 }
 
 func Debugf(format string, v ...interface{}) {
-	if logger != nil {
-		logger.output(DEBUG, format, v...)
+	if !defaultLogger.closeDebug {
+		defaultLogger.output(DEBUG, format, v...)
 	}
 }
 
 func Info(v ...interface{}) {
-	if logger != nil {
-		logger.output(INFO, "", v...)
-	}
+	defaultLogger.output(INFO, "", v...)
 }
 
 func Infof(format string, v ...interface{}) {
-	if logger != nil {
-		logger.output(INFO, format, v...)
-	}
-}
-
-func Warn(v ...interface{}) {
-	if logger != nil {
-		logger.output(WARN, "", v...)
-	}
-}
-
-func Warnf(format string, v ...interface{}) {
-	if logger != nil {
-		logger.output(WARN, format, v...)
-	}
+	defaultLogger.output(INFO, format, v...)
 }
 
 func Error(v ...interface{}) {
-	if logger != nil {
-		logger.output(ERROR, "", v...)
-	}
+	defaultLogger.output(ERROR, "", v...)
 }
 
 func Errorf(format string, v ...interface{}) {
-	if logger != nil {
-		logger.output(ERROR, format, v...)
-	}
+	defaultLogger.output(ERROR, format, v...)
+}
+
+func Fatal(v ...interface{}) {
+	defaultLogger.output(FATAL, "", v...)
+	os.Exit(1)
+}
+
+func Fatalf(format string, v ...interface{}) {
+	defaultLogger.output(FATAL, format, v...)
+	os.Exit(1)
+}
+
+func Panic(v ...interface{}) {
+	defaultLogger.output(PANIC, "", v...)
+	panic(fmt.Sprintln(v...))
+}
+
+func Panicf(format string, v ...interface{}) {
+	defaultLogger.output(PANIC, format, v...)
+	panic(fmt.Sprintf(format, v...))
+}
+
+func Stack(v ...interface{}) {
+	defaultLogger.output(ERROR, "", runStack(v...))
 }

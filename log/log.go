@@ -8,90 +8,106 @@ import (
 	"time"
 )
 
+const (
+	Ldate         = 1 << iota                                   // 日期标记位  2019/01/23
+	Ltime                                                       // 时间标记位  01:23:12
+	Lmicroseconds                                               // 微秒级标记位 01:23:12.111222
+	LUTC                                                        // if Ldate or Ltime is set, use UTC rather than the local time zone
+	Llongfile                                                   // 完整文件名称 /home/go/src/zinx/server.go
+	Lshortfile                                                  // 最后文件名   server.go
+	Llevel                                                      // 当前日志级别： 0(Debug), 1(Info), 2(Warn), 3(Error), 4(Panic), 5(Fatal)
+	LstdFlags     = Ldate | Ltime                               // 标准头部日志格式
+	LdefFlags     = Llevel | Ldate | Lmicroseconds | Lshortfile // 默认日志头部格式
+)
+
 type Level int
 
 const (
-	TRACE Level = iota // TRACE 用户级基本输出
-	DEBUG              // DEBUG 用户级调试输出
+	DEBUG Level = iota // DEBUG 用户级调试输出
 	INFO               // INFO  用户级重要信息
 	WARN               // WARN  用户级警告信息
 	ERROR              // ERROR 用户级错误信息
+	PANIC              // PANIC
+	FATAL              // FATAL
 )
 
-const (
-	Ldate         = 1 << iota     // the date in the local time zone: 2009/01/23
-	Ltime                         // the time in the local time zone: 01:23:23
-	Lmicroseconds                 // microsecond resolution: 01:23:23.123123.  assumes Ltime.
-	Llongfile                     // full file name and line number: /a/b/c/d.go:23
-	Lshortfile                    // final file name element and line number: d.go:23. overrides Llongfile
-	LUTC                          // if Ldate or Ltime is set, use UTC rather than the local time zone
-	LstdFlags     = Ldate | Ltime // initial values for the standard logger
-)
-
-const calldepth = 2
-
-var (
-	LevelString = [...]string{
-		"[TRACE]",
-		"[DEBUG]",
-		"[INFO] ",
-		"[WARN] ",
-		"[ERROR]",
-	}
-
-	defOutLevel = map[Level]struct{}{
-		TRACE: {},
-		DEBUG: {},
-		INFO:  {},
-		WARN:  {},
-		ERROR: {},
-	}
-
-	stdOut     = true //控制台输出,默认开启
-	stdConsole = os.Stdout
-)
-
-//关闭控制台输出
-func CloseStdOut() {
-	stdOut = false
+var levelString = []string{
+	"[DEBUG]",
+	"[INFO] ",
+	"[WARN] ",
+	"[ERROR]",
+	"[PANIC]",
+	"[FATAL]",
 }
 
 type Logger struct {
-	mu     sync.Mutex
-	flag   int
-	buf    []byte
-	outLev map[Level]struct{}
-	logOut *OutFile
-}
-
-func NewLogger(basePath, fileName string, maxSize ...int) *Logger {
-	var writeMaxSize = 0
-	if len(maxSize) > 0 {
-		writeMaxSize = maxSize[0]
-	}
-	return newLogger(basePath, fileName, writeMaxSize)
+	mu          sync.Mutex
+	flag        int
+	prefix      string //日志前缀
+	calldepth   int
+	closeDebug  bool
+	stdOutClose bool
+	buf         []byte
+	outFile     *OutFile
 }
 
 // newLogger
 // maxSize 分割文件字节数
 // maxSize = 0 不按照字节大小分割，仅按照日期分割
-func newLogger(basePath, fileName string, maxSize int) *Logger {
-	out := newOutFile(basePath, fileName, maxSize)
-	return &Logger{
-		flag:   Ldate | Lmicroseconds | Lshortfile,
-		outLev: defOutLevel, // 默认所有日志类型输出
-		logOut: out,
+func NewLogger(basePath, fileName string, maxSize ...int) *Logger {
+	l := &Logger{
+		flag:      LdefFlags,
+		calldepth: 2,
 	}
+	l.SetOutput(basePath, fileName, maxSize...)
+	return l
 }
 
-//设置输出等级
-func (l *Logger) SetOutLevel(levels ...Level) {
-	if len(levels) != 0 {
-		l.outLev = map[Level]struct{}{}
-		for _, lev := range levels {
-			l.outLev[lev] = struct{}{}
-		}
+func (l *Logger) SetFlags(flag int) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.flag = flag
+}
+
+func (l *Logger) SetOutput(basePath, fileName string, maxSize ...int) {
+	var writeMaxSize = 0
+	if len(maxSize) > 0 {
+		writeMaxSize = maxSize[0]
 	}
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.outFile != nil {
+		l.outFile.close()
+	}
+	l.outFile = newOutFile(basePath, fileName, writeMaxSize)
+}
+
+//设置日志的 用户自定义前缀字符串
+func (l *Logger) SetPrefix(prefix string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.prefix = prefix
+}
+
+// 关闭控制台输出
+func (l *Logger) CloseStdOut() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.stdOutClose = true
+
+}
+
+// 函数调用层数
+func (l *Logger) SetCallDepth(calldepth int) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.calldepth = calldepth
+}
+
+// 关闭debug日志输出
+func (l *Logger) CloseDebug() {
+	l.closeDebug = true
 }
 
 type OutFile struct {
@@ -107,6 +123,13 @@ func newOutFile(basePath, fileName string, maxSize int) *OutFile {
 	return &OutFile{basePath: basePath, fileName: fileName, writeMaxSize: maxSize}
 }
 
+func (out *OutFile) close() {
+	if out.writer != nil {
+		_ = out.writer.Close()
+		out.writer = nil
+	}
+}
+
 func (out *OutFile) openFile(now *time.Time) {
 	year, month, day := now.Date()
 	hour, min, sec := now.Clock()
@@ -115,9 +138,7 @@ func (out *OutFile) openFile(now *time.Time) {
 		path := fmt.Sprintf("%s/%s.%02d.%02d.%02d.log", dir, out.fileName, hour, min, sec)
 		mode := os.O_RDWR | os.O_CREATE | os.O_APPEND
 		file, err := os.OpenFile(path, mode, 0666)
-		if out.writer != nil {
-			_ = out.writer.Close()
-		}
+		out.close()
 		if nil == err {
 			out.writer = file
 			out.writeSize = 0
@@ -127,6 +148,10 @@ func (out *OutFile) openFile(now *time.Time) {
 }
 
 func (out *OutFile) checkOutFile(now *time.Time) bool {
+	if out.fileName == "" {
+		return true
+	}
+
 	if out.writer == nil {
 		return false
 	}
@@ -147,10 +172,6 @@ func (out *OutFile) checkOutFile(now *time.Time) bool {
 func (out *OutFile) write(now *time.Time, buff []byte) {
 	if false == out.checkOutFile(now) {
 		out.openFile(now)
-	}
-
-	if stdOut {
-		_, _ = stdConsole.Write(buff)
 	}
 
 	if out.writer != nil {
@@ -177,8 +198,12 @@ func itoa(buf *[]byte, i int, wid int) {
 	*buf = append(*buf, b[bp:]...)
 }
 
-func (l *Logger) formatHeader(buf *[]byte, t time.Time, file string, line int) {
-	*buf = append(*buf, ' ')
+func (l *Logger) formatHeader(buf *[]byte, t time.Time, file string, line int, level Level) {
+	if l.prefix != "" {
+		*buf = append(*buf, l.prefix...)
+		*buf = append(*buf, ' ')
+	}
+
 	if l.flag&(Ldate|Ltime|Lmicroseconds) != 0 {
 		if l.flag&LUTC != 0 {
 			t = t.UTC()
@@ -206,6 +231,12 @@ func (l *Logger) formatHeader(buf *[]byte, t time.Time, file string, line int) {
 			*buf = append(*buf, ' ')
 		}
 	}
+
+	if l.flag&Llevel != 0 {
+		*buf = append(*buf, levelString[level]...)
+		*buf = append(*buf, ' ')
+	}
+
 	if l.flag&(Lshortfile|Llongfile) != 0 {
 		if l.flag&Lshortfile != 0 {
 			short := file
@@ -225,13 +256,8 @@ func (l *Logger) formatHeader(buf *[]byte, t time.Time, file string, line int) {
 }
 
 func (l *Logger) output(lev Level, format string, v ...interface{}) {
-	if _, ok := l.outLev[lev]; !ok {
-		return
-	}
-
 	now := time.Now() // get this early.
 
-	prefix := LevelString[lev]
 	text := ""
 	if format == "" {
 		text = fmt.Sprintln(v...)
@@ -247,31 +273,42 @@ func (l *Logger) output(lev Level, format string, v ...interface{}) {
 		// Release lock while getting caller info - it's expensive.
 		l.mu.Unlock()
 		var ok bool
-		_, file, line, ok = runtime.Caller(calldepth)
+		_, file, line, ok = runtime.Caller(l.calldepth)
 		if !ok {
-			file = "???"
+			file = "unknown-file"
 			line = 0
 		}
 		l.mu.Lock()
 	}
+
+	//清零buf
 	l.buf = l.buf[:0]
-	l.buf = append(l.buf, prefix...)
-	l.formatHeader(&l.buf, now, file, line)
+	//写日志头
+	l.formatHeader(&l.buf, now, file, line, lev)
+	//写日志内容
 	l.buf = append(l.buf, text...)
-	if len(text) == 0 || text[len(text)-1] != '\n' {
+	//补充回车
+	if len(text) > 0 && text[len(text)-1] != '\n' {
 		l.buf = append(l.buf, '\n')
 	}
 
-	l.logOut.write(&now, l.buf)
+	if !l.stdOutClose {
+		_, _ = os.Stderr.Write(l.buf)
+	}
 
+	l.outFile.write(&now, l.buf)
 }
 
 func (l *Logger) Debug(v ...interface{}) {
-	l.output(DEBUG, "", v...)
+	if !l.closeDebug {
+		l.output(DEBUG, "", v...)
+	}
 }
 
 func (l *Logger) Debugf(format string, v ...interface{}) {
-	l.output(DEBUG, format, v...)
+	if !l.closeDebug {
+		l.output(DEBUG, format, v...)
+	}
 }
 
 func (l *Logger) Info(v ...interface{}) {
@@ -282,18 +319,45 @@ func (l *Logger) Infof(format string, v ...interface{}) {
 	l.output(INFO, format, v...)
 }
 
-func (l *Logger) Warn(v ...interface{}) {
-	l.output(WARN, "", v...)
-}
-
-func (l *Logger) Warnf(format string, v ...interface{}) {
-	l.output(WARN, format, v...)
-}
-
 func (l *Logger) Error(v ...interface{}) {
 	l.output(ERROR, "", v...)
 }
 
 func (l *Logger) Errorf(format string, v ...interface{}) {
 	l.output(ERROR, format, v...)
+}
+
+func (l *Logger) Fatal(v ...interface{}) {
+	l.output(FATAL, "", v...)
+	os.Exit(1)
+}
+
+func (l *Logger) Fatalf(format string, v ...interface{}) {
+	l.output(FATAL, format, v...)
+	os.Exit(1)
+}
+
+func (l *Logger) Panic(v ...interface{}) {
+	l.output(PANIC, "", v...)
+	panic(fmt.Sprintln(v...))
+}
+
+func (l *Logger) Panicf(format string, v ...interface{}) {
+	l.output(PANIC, format, v...)
+	panic(fmt.Sprintf(format, v...))
+}
+
+// Stack
+func runStack(v ...interface{}) string {
+	s := fmt.Sprint(v...)
+	s += "\n"
+	buf := make([]byte, 64*1024)
+	n := runtime.Stack(buf, true) //得到当前堆栈信息
+	s += string(buf[:n])
+	s += "\n"
+	return s
+}
+
+func (l *Logger) Stack(v ...interface{}) {
+	l.output(ERROR, "", runStack(v...))
 }
