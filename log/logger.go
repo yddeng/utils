@@ -13,6 +13,10 @@ var defaultLogger = NewLogger(".", "")
 
 func Default() *Logger { return defaultLogger }
 
+func CloseDebug() { defaultLogger.CloseDebug() }
+
+func CloseStdOut() { defaultLogger.CloseStdOut() }
+
 func SetOutput(basePath, fileName string, maxSize ...int) {
 	defaultLogger.SetOutput(basePath, fileName, maxSize...)
 }
@@ -20,10 +24,6 @@ func SetOutput(basePath, fileName string, maxSize ...int) {
 func SetFlags(flag int) {
 	defaultLogger.SetFlags(flag)
 }
-
-func CloseDebug() { defaultLogger.CloseDebug() }
-
-func CloseStdOut() { defaultLogger.CloseStdOut() }
 
 func SetPrefix(prefix string) {
 	defaultLogger.SetPrefix(prefix)
