@@ -9,7 +9,7 @@ import (
    全局默认提供一个Logger对外句柄，可以直接使用API系列调用
    全局日志对象 stdOut
 */
-var defaultLogger = NewLogger(".", "")
+var defaultLogger = newLogger(nil)
 
 func Default() *Logger { return defaultLogger }
 

@@ -30,3 +30,9 @@ func TestLogger(t *testing.T) {
 
 	Fatal("fatal")
 }
+
+func TestNew(t *testing.T) {
+	logger := NewLogger(".", "", LdefFlags)
+
+	logger.Info("logger")
+}

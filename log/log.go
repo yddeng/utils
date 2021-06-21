@@ -17,7 +17,7 @@ const (
 	Lshortfile                                                  // 最后文件名   server.go
 	Llevel                                                      // 当前日志级别： 0(Debug), 1(Info), 2(Warn), 3(Error), 4(Panic), 5(Fatal)
 	LstdFlags     = Ldate | Ltime                               // 标准头部日志格式
-	LdefFlags     = Llevel | Ldate | Lmicroseconds | Lshortfile // 默认日志头部格式
+	LdefFlags     = Ldate | Lmicroseconds | Llevel | Lshortfile // 默认日志头部格式
 )
 
 type Level int
@@ -41,7 +41,6 @@ var levelString = []string{
 }
 
 type Logger struct {
-	mu          sync.Mutex
 	flag        int
 	prefix      string //日志前缀
 	calldepth   int
@@ -49,18 +48,18 @@ type Logger struct {
 	stdOutClose bool
 	buf         []byte
 	outFile     *OutFile
+	mu          sync.Mutex
 }
 
-// newLogger
-// maxSize 分割文件字节数
-// maxSize = 0 不按照字节大小分割，仅按照日期分割
 func NewLogger(basePath, fileName string, maxSize ...int) *Logger {
-	l := &Logger{
-		flag:      LdefFlags,
-		calldepth: 2,
+	if fileName == "" {
+		panic("log:New fileName is empty. ")
 	}
-	l.SetOutput(basePath, fileName, maxSize...)
-	return l
+	return newLogger(newOutFile(basePath, fileName, maxSize...))
+}
+
+func newLogger(out *OutFile) *Logger {
+	return &Logger{outFile: out, flag: LdefFlags, calldepth: 2}
 }
 
 func (l *Logger) SetFlags(flag int) {
@@ -70,17 +69,14 @@ func (l *Logger) SetFlags(flag int) {
 }
 
 func (l *Logger) SetOutput(basePath, fileName string, maxSize ...int) {
-	var writeMaxSize = 0
-	if len(maxSize) > 0 {
-		writeMaxSize = maxSize[0]
-	}
+	outFile := newOutFile(basePath, fileName, maxSize...)
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.outFile != nil {
 		l.outFile.close()
 	}
-	l.outFile = newOutFile(basePath, fileName, writeMaxSize)
+	l.outFile = outFile
 }
 
 //设置日志的 用户自定义前缀字符串
@@ -119,8 +115,15 @@ type OutFile struct {
 	writeSize    int       //累计写入文件的字节数量
 }
 
-func newOutFile(basePath, fileName string, maxSize int) *OutFile {
-	return &OutFile{basePath: basePath, fileName: fileName, writeMaxSize: maxSize}
+// newOutFile
+// maxSize 分割文件字节数
+// maxSize = 0 不按照字节大小分割，仅按照日期分割
+func newOutFile(basePath, fileName string, maxSize ...int) *OutFile {
+	var writeMaxSize = 0
+	if len(maxSize) > 0 {
+		writeMaxSize = maxSize[0]
+	}
+	return &OutFile{basePath: basePath, fileName: fileName, writeMaxSize: writeMaxSize}
 }
 
 func (out *OutFile) close() {
@@ -295,8 +298,9 @@ func (l *Logger) output(lev Level, format string, v ...interface{}) {
 	if !l.stdOutClose {
 		_, _ = os.Stderr.Write(l.buf)
 	}
-
-	l.outFile.write(&now, l.buf)
+	if l.outFile != nil {
+		l.outFile.write(&now, l.buf)
+	}
 }
 
 func (l *Logger) Debug(v ...interface{}) {
