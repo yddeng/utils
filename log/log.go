@@ -41,14 +41,14 @@ var levelString = []string{
 }
 
 type Logger struct {
-	flag        int
-	prefix      string //日志前缀
-	calldepth   int
-	closeDebug  bool
-	stdOutClose bool
-	buf         []byte
-	outFile     *OutFile
-	mu          sync.Mutex
+	flag         int
+	prefix       string //日志前缀
+	calldepth    int
+	debugClosed  bool
+	stdOutClosed bool
+	buf          []byte
+	outFile      *OutFile
+	mu           sync.Mutex
 }
 
 func NewLogger(basePath, fileName string, maxSize ...int) *Logger {
@@ -90,7 +90,7 @@ func (l *Logger) SetPrefix(prefix string) {
 func (l *Logger) CloseStdOut() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.stdOutClose = true
+	l.stdOutClosed = true
 
 }
 
@@ -103,7 +103,7 @@ func (l *Logger) SetCallDepth(calldepth int) {
 
 // 关闭debug日志输出
 func (l *Logger) CloseDebug() {
-	l.closeDebug = true
+	l.debugClosed = true
 }
 
 type OutFile struct {
@@ -263,7 +263,7 @@ func (l *Logger) output(lev Level, format string, v ...interface{}) {
 
 	text := ""
 	if format == "" {
-		text = fmt.Sprintln(v...)
+		text = fmt.Sprint(v...)
 	} else {
 		text = fmt.Sprintf(format, v...)
 	}
@@ -295,7 +295,7 @@ func (l *Logger) output(lev Level, format string, v ...interface{}) {
 		l.buf = append(l.buf, '\n')
 	}
 
-	if !l.stdOutClose {
+	if !l.stdOutClosed {
 		_, _ = os.Stderr.Write(l.buf)
 	}
 	if l.outFile != nil {
@@ -304,13 +304,13 @@ func (l *Logger) output(lev Level, format string, v ...interface{}) {
 }
 
 func (l *Logger) Debug(v ...interface{}) {
-	if !l.closeDebug {
+	if !l.debugClosed {
 		l.output(DEBUG, "", v...)
 	}
 }
 
 func (l *Logger) Debugf(format string, v ...interface{}) {
-	if !l.closeDebug {
+	if !l.debugClosed {
 		l.output(DEBUG, format, v...)
 	}
 }

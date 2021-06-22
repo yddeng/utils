@@ -1,6 +1,8 @@
 package log
 
 import (
+	"log"
+	"os"
 	"testing"
 )
 
@@ -14,6 +16,10 @@ func TestLogger(t *testing.T) {
 
 	Error("Errorln message", 1)
 	Errorf("%s : %d", "Errorf message", 2)
+
+	SetPrefix("Prefix")
+	Info("message info\n")
+	Infof("message infof\n")
 
 	SetOutput("./", "testLog", 100)
 
@@ -32,7 +38,14 @@ func TestLogger(t *testing.T) {
 }
 
 func TestNew(t *testing.T) {
-	logger := NewLogger(".", "", LdefFlags)
+	//logger := NewLogger(".", "", LdefFlags)
+	//
+	//logger.Info("logger")
 
-	logger.Info("logger")
+	log.Print("log print")
+
+	f, _ := os.Create("./test.log")
+	log.SetOutput(f)
+
+	log.Println("file log print")
 }

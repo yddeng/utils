@@ -30,13 +30,13 @@ func SetPrefix(prefix string) {
 }
 
 func Debug(v ...interface{}) {
-	if !defaultLogger.closeDebug {
+	if !defaultLogger.debugClosed {
 		defaultLogger.output(DEBUG, "", v...)
 	}
 }
 
 func Debugf(format string, v ...interface{}) {
-	if !defaultLogger.closeDebug {
+	if !defaultLogger.debugClosed {
 		defaultLogger.output(DEBUG, format, v...)
 	}
 }
