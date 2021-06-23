@@ -67,7 +67,7 @@ func (q *BlockQueue) Pop() (ret interface{}, closed bool) {
 	closed = q.closed
 	q.mutex.Unlock()
 	if needSignal {
-		q.fullC.Broadcast()
+		q.fullC.Signal()
 	}
 	return
 }
@@ -90,7 +90,7 @@ func (q *BlockQueue) GetAll() (ret []interface{}, closed bool) {
 	closed = q.closed
 	q.mutex.Unlock()
 	if needSignal {
-		q.fullC.Broadcast()
+		q.fullC.Signal()
 	}
 	return
 }
@@ -137,9 +137,11 @@ func (q *BlockQueue) len() int {
 
 func NewBlockQueue(cap int) *BlockQueue {
 	mutex := &sync.Mutex{}
-	data := make([]interface{}, cap)
-	return &BlockQueue{cap: cap, data: data,
-		mutex: mutex, emptyC: sync.NewCond(mutex),
-		fullC: sync.NewCond(mutex),
+	return &BlockQueue{
+		cap:    cap,
+		data:   make([]interface{}, cap),
+		mutex:  mutex,
+		emptyC: sync.NewCond(mutex),
+		fullC:  sync.NewCond(mutex),
 	}
 }

@@ -2,7 +2,6 @@ package queue
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 	"time"
 )
@@ -54,39 +53,4 @@ func TestNewChannelQueue(t *testing.T) {
 	time.Sleep(time.Second)
 	cq.Close()
 	select {}
-}
-
-func TestNewEventHandler(t *testing.T) {
-	fn1 := func() {}
-	fn2 := func(i int) {}
-	fn3 := func(i int, b bool) {}
-	fn4 := func(i int) error { return nil }
-	fn5 := func(i int) (bool, error) { return false, nil }
-	fn6 := func(args ...interface{}) {}
-
-	fmt.Println(reflect.TypeOf(fn1).String())
-	fmt.Println(reflect.TypeOf(fn2).String())
-	fmt.Println(reflect.TypeOf(fn3).String())
-	fmt.Println(reflect.TypeOf(fn4).String())
-	fmt.Println(reflect.TypeOf(fn5).String())
-	fmt.Println(reflect.TypeOf(fn6).String())
-
-	fn := func(f interface{}) {
-		switch f.(type) {
-		case func():
-			fmt.Println(reflect.TypeOf(f).String(), "func()")
-		case func([]interface{}), func(...interface{}):
-			fmt.Println(reflect.TypeOf(f).String(), "func([]interface{})")
-		//case func(...interface{}):
-		//	fmt.Println(reflect.TypeOf(f).String(), "func(...interface{})")
-		default:
-			fmt.Println(reflect.TypeOf(f).String())
-		}
-	}
-	fn(fn1)
-	fn(fn2)
-	fn(fn3)
-	fn(fn4)
-	fn(fn5)
-	fn(fn6)
 }

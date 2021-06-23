@@ -2,64 +2,70 @@ package queue
 
 import (
 	"fmt"
-	"sync/atomic"
+	"sync"
 )
 
 var ErrQueueFull = fmt.Errorf("queue is full")
 
 type ChannelQueue struct {
-	channel  chan interface{}
-	fullSize int
-	opened   int32
+	queue     chan interface{}
+	fullSize  int
+	closeOnce sync.Once
+	closeCh   chan struct{}
 }
 
-func (cq *ChannelQueue) open() bool {
-	return atomic.LoadInt32(&cq.opened) == 1
+func (cq *ChannelQueue) Closed() bool {
+	select {
+	case <-cq.closeCh:
+		return true
+	default:
+		return false
+	}
+}
+
+func (cq *ChannelQueue) Close() {
+	cq.closeOnce.Do(func() {
+		close(cq.closeCh)
+		close(cq.queue)
+	})
 }
 
 // 阻塞投递
 func (cq *ChannelQueue) PushB(e interface{}) error {
-	if !cq.open() {
+	select {
+	case <-cq.closeCh:
 		return ErrClosed
+	case cq.queue <- e:
+		return nil
 	}
-	cq.channel <- e
-	return nil
 }
 
 // 非阻塞投递
 func (cq *ChannelQueue) PushN(e interface{}) error {
-	if !cq.open() {
+	select {
+	case <-cq.closeCh:
 		return ErrClosed
-	}
-
-	if len(cq.channel) == cq.fullSize {
+	case cq.queue <- e:
+		return nil
+	default:
 		return ErrQueueFull
 	}
-
-	cq.channel <- e
-	return nil
 }
 
 // 堵塞出
 func (cq *ChannelQueue) Pop() (interface{}, bool) {
-	elem, open := <-cq.channel
+	elem, open := <-cq.queue
 	return elem, open
 }
 
-func (cq *ChannelQueue) Close() {
-	if atomic.CompareAndSwapInt32(&cq.opened, 1, 0) {
-		close(cq.channel)
-	}
-}
-
-func (cq *ChannelQueue) IsOpen() bool {
-	return cq.open()
+func (cq *ChannelQueue) Len() int {
+	return len(cq.queue)
 }
 
 func NewChannelQueue(fullSize int) *ChannelQueue {
 	return &ChannelQueue{
-		channel:  make(chan interface{}, fullSize),
+		queue:    make(chan interface{}, fullSize),
 		fullSize: fullSize,
-		opened:   1,
+		closeCh:  make(chan struct{}),
 	}
 }
