@@ -42,7 +42,7 @@ byte环形缓存区，减少字节拷贝次数。
 
 ###  queue
 
-channelQueue  blockQueue  
+channelQueue, blockQueue, priorityQueue
 
 ###  timer
 
