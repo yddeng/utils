@@ -7,7 +7,6 @@ import (
 )
 
 func TestLogger(t *testing.T) {
-
 	Info("infoln message", 1)
 	Infof("%s : %d", "infof message", 2)
 
@@ -18,7 +17,7 @@ func TestLogger(t *testing.T) {
 	Errorf("%s : %d", "Errorf message", 2)
 
 	SetPrefix("Prefix")
-	Info("message info\n")
+	Info("message info")
 	Infof("message infof\n")
 
 	SetOutput("./", "testLog", 100)
@@ -26,7 +25,7 @@ func TestLogger(t *testing.T) {
 	Debug("file debug")
 	logger := Default()
 	logger.Info("default info")
-	Stack("test stack")
+	Stack("test", "stack")
 
 	CloseDebug()
 	Debug("closed debug")

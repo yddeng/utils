@@ -263,7 +263,7 @@ func (l *Logger) output(lev Level, format string, v ...interface{}) {
 
 	text := ""
 	if format == "" {
-		text = fmt.Sprint(v...)
+		text = fmt.Sprintln(v...)
 	} else {
 		text = fmt.Sprintf(format, v...)
 	}
@@ -353,8 +353,7 @@ func (l *Logger) Panicf(format string, v ...interface{}) {
 
 // Stack
 func runStack(v ...interface{}) string {
-	s := fmt.Sprint(v...)
-	s += "\n"
+	s := fmt.Sprintln(v...)
 	buf := make([]byte, 64*1024)
 	n := runtime.Stack(buf, true) //得到当前堆栈信息
 	s += string(buf[:n])
