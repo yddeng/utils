@@ -2,90 +2,110 @@ package task
 
 import (
 	"errors"
-	"github.com/sniperHW/kendynet/util"
 	"sync"
-	"sync/atomic"
+	"time"
 )
 
-const minChannelSize = 1024
-
-type task struct {
-	fn   interface{}
-	args []interface{}
-}
+const (
+	defaultTaskSize = 1024
+	defaultIdleTime = time.Second * 10
+)
 
 type TaskPool struct {
-	maxTreadCnt int32
-	crtTreadCnt int32
-	taskChan    chan *task
-	maxTaskCnt  int32
-	crtTaskCnt  int32
-	stopped     int32
-	mtx         sync.Mutex
+	workers    []*taskWorker
+	workerSize int
+	lock       sync.Mutex
+
+	taskChan   chan Task
+	workerPool sync.Pool
+
+	die     chan struct{}
+	dieOnce sync.Once
 }
 
-func NewTaskPool(threadMaxCount, channelSize int) *TaskPool {
-	if channelSize < minChannelSize {
-		channelSize = minChannelSize
-	}
-	return &TaskPool{
-		crtTreadCnt: 0,
-		maxTreadCnt: int32(threadMaxCount),
-		taskChan:    make(chan *task, channelSize),
-		maxTaskCnt:  int32(channelSize),
-	}
+func (this *TaskPool) dataCh() chan Task {
+	return this.taskChan
 }
 
-func (p *TaskPool) AddTask(fn interface{}, args ...interface{}) error {
-	if atomic.LoadInt32(&p.stopped) == 1 {
-		return errors.New("taskPool : AddTask failed, pool is stopped")
+func (this *TaskPool) idleWorker(worker *taskWorker) {
+	this.lock.Lock()
+	for i, w := range this.workers {
+		if w == worker {
+			this.workers = append(this.workers[:i], this.workers[i+1:]...)
+			break
+		}
+	}
+	this.workerPool.Put(worker)
+	this.lock.Unlock()
+}
+
+func (this *TaskPool) Running() int {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+	return len(this.workers)
+}
+
+func (this *TaskPool) Submit(fn interface{}, args ...interface{}) error {
+	select {
+	case <-this.die:
+		return errors.New("taskPool:Submit pool is stopped")
+	default:
 	}
 
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
+	task := FuncTask(fn, args...)
 
-	if len(p.taskChan) == int(p.maxTaskCnt) {
-		return errors.New("taskPool : AddTask failed, task is full")
+	select {
+	case this.taskChan <- task:
+	default:
+		return errors.New("taskPool:Submit task channel is full")
 	}
 
-	p.taskChan <- &task{fn: fn, args: args}
+	this.lock.Lock()
+	defer this.lock.Unlock()
 
-	p.crtTaskCnt++
-	if p.crtTreadCnt < p.maxTreadCnt {
-		p.crtTreadCnt++
-		go p.newTread()
+	if len(this.workers) < this.workerSize {
+		w := this.workerPool.Get().(*taskWorker)
+		this.workers = append(this.workers, w)
+		w.run()
 	}
 	return nil
 }
 
-func (p *TaskPool) newTread() {
-	for {
-		p.mtx.Lock()
-		if p.crtTaskCnt == 0 {
-			p.mtx.Unlock()
-			break
-		}
-		p.mtx.Unlock()
-
-		task, opened := <-p.taskChan
-		if !opened {
-			break
-		}
-
-		p.mtx.Lock()
-		p.crtTaskCnt--
-		p.mtx.Unlock()
-
-		_, _ = util.ProtectCall(task.fn, task.args)
-
-	}
-	p.mtx.Lock()
-	p.crtTreadCnt--
-	p.mtx.Unlock()
+func (this *TaskPool) Stop() {
+	this.dieOnce.Do(func() {
+		close(this.die)
+	})
 }
 
-func (p *TaskPool) Stop() {
-	if atomic.CompareAndSwapInt32(&p.stopped, 0, 1) {
-		close(p.taskChan)
+func NewTaskPool(workerSize, taskSize int, idleTimes ...time.Duration) *TaskPool {
+	pool := new(TaskPool)
+	pool.die = make(chan struct{})
+
+	var workerIdle time.Duration
+	if len(idleTimes) == 0 || idleTimes[0] < time.Millisecond {
+		workerIdle = defaultIdleTime
+	} else {
+		workerIdle = idleTimes[0]
 	}
+
+	if taskSize < defaultTaskSize {
+		pool.taskChan = make(chan Task, defaultTaskSize)
+	} else {
+		pool.taskChan = make(chan Task, taskSize)
+	}
+
+	if workerSize <= 0 {
+		workerSize = 1
+	}
+	pool.workerSize = workerSize
+	pool.workers = make([]*taskWorker, 0, workerSize)
+
+	pool.workerPool.New = func() interface{} {
+		return &taskWorker{
+			mgr:  pool,
+			idle: workerIdle,
+		}
+	}
+
+	return pool
 }
