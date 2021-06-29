@@ -3,72 +3,72 @@ package task
 import (
 	"errors"
 	"sync"
-	"time"
 )
 
 const (
 	defaultTaskSize = 1024
-	defaultIdleTime = time.Second * 10
 )
 
 type TaskPool struct {
-	workers    []*taskWorker
+	workers    int
 	workerSize int
-	lock       sync.Mutex
-
-	taskChan   chan Task
+	workerLock sync.Mutex
 	workerPool sync.Pool
+
+	taskChan chan Task
 
 	die     chan struct{}
 	dieOnce sync.Once
 }
 
-func (this *TaskPool) dataCh() chan Task {
-	return this.taskChan
-}
-
-func (this *TaskPool) idleWorker(worker *taskWorker) {
-	this.lock.Lock()
-	for i, w := range this.workers {
-		if w == worker {
-			this.workers = append(this.workers[:i], this.workers[i+1:]...)
-			break
-		}
-	}
+func (this *TaskPool) freeWorker(worker *taskWorker) {
+	this.workerLock.Lock()
+	this.workers--
 	this.workerPool.Put(worker)
-	this.lock.Unlock()
+	this.workerLock.Unlock()
 }
 
 func (this *TaskPool) Running() int {
-	this.lock.Lock()
-	defer this.lock.Unlock()
-	return len(this.workers)
+	this.workerLock.Lock()
+	defer this.workerLock.Unlock()
+	return this.workers
 }
 
-func (this *TaskPool) Submit(fn interface{}, args ...interface{}) error {
+func (this *TaskPool) submit(task Task) error {
 	select {
 	case <-this.die:
 		return errors.New("taskPool:Submit pool is stopped")
 	default:
 	}
 
-	task := FuncTask(fn, args...)
+	taskChan := this.taskChan
+	if this.workerSize == 0 {
+		taskChan = make(chan Task, 1)
+	}
 
 	select {
-	case this.taskChan <- task:
+	case taskChan <- task:
 	default:
 		return errors.New("taskPool:Submit task channel is full")
 	}
 
-	this.lock.Lock()
-	defer this.lock.Unlock()
+	this.workerLock.Lock()
+	defer this.workerLock.Unlock()
 
-	if len(this.workers) < this.workerSize {
+	if this.workerSize == 0 || this.workers < this.workerSize {
+		this.workers++
 		w := this.workerPool.Get().(*taskWorker)
-		this.workers = append(this.workers, w)
-		w.run()
+		go w.run(taskChan)
 	}
 	return nil
+}
+
+func (this *TaskPool) Submit(fn interface{}, args ...interface{}) error {
+	return this.submit(&funcTask{fn: fn, args: args})
+}
+
+func (this *TaskPool) SubmitTask(task Task) error {
+	return this.submit(task)
 }
 
 func (this *TaskPool) Stop() {
@@ -77,34 +77,22 @@ func (this *TaskPool) Stop() {
 	})
 }
 
-func NewTaskPool(workerSize, taskSize int, idleTimes ...time.Duration) *TaskPool {
+// NewTaskPool
+// workerSize > 0 , 限制goroutine的数量; workerSize = 0 , 不限制
+func NewTaskPool(workerSize, taskSize int) *TaskPool {
+	if taskSize < defaultTaskSize {
+		taskSize = defaultTaskSize
+	}
+	if workerSize < 0 {
+		workerSize = 0
+	}
+
 	pool := new(TaskPool)
 	pool.die = make(chan struct{})
-
-	var workerIdle time.Duration
-	if len(idleTimes) == 0 || idleTimes[0] < time.Millisecond {
-		workerIdle = defaultIdleTime
-	} else {
-		workerIdle = idleTimes[0]
-	}
-
-	if taskSize < defaultTaskSize {
-		pool.taskChan = make(chan Task, defaultTaskSize)
-	} else {
-		pool.taskChan = make(chan Task, taskSize)
-	}
-
-	if workerSize <= 0 {
-		workerSize = 1
-	}
 	pool.workerSize = workerSize
-	pool.workers = make([]*taskWorker, 0, workerSize)
-
+	pool.taskChan = make(chan Task, taskSize)
 	pool.workerPool.New = func() interface{} {
-		return &taskWorker{
-			mgr:  pool,
-			idle: workerIdle,
-		}
+		return &taskWorker{mgr: pool}
 	}
 
 	return pool

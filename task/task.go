@@ -4,11 +4,10 @@ import (
 	"github.com/yddeng/utils"
 	"runtime"
 	"sync"
-	"time"
 )
 
 type Task interface {
-	Do() (result []interface{}, err error)
+	Do()
 }
 
 type funcTask struct {
@@ -16,41 +15,28 @@ type funcTask struct {
 	args []interface{}
 }
 
-func FuncTask(f interface{}, args ...interface{}) *funcTask {
-	return &funcTask{
-		fn:   f,
-		args: args,
-	}
-}
-
-func (this *funcTask) Do() (result []interface{}, err error) {
-	return utils.CallFunc(this.fn, this.args...)
+func (this *funcTask) Do() {
+	_, _ = utils.CallFunc(this.fn, this.args...)
 }
 
 type taskMgr interface {
-	dataCh() chan Task
-	idleWorker(*taskWorker)
+	freeWorker(*taskWorker)
 }
 
 type taskWorker struct {
-	mgr  taskMgr
-	idle time.Duration
+	mgr taskMgr
 }
 
-func (this *taskWorker) run() {
-	go func() {
-		defer this.mgr.idleWorker(this)
-		timer := time.NewTimer(this.idle)
-		for {
-			select {
-			case <-timer.C:
-				return
-			case task := <-this.mgr.dataCh():
-				timer.Reset(this.idle)
-				task.Do()
-			}
+func (this *taskWorker) run(taskC chan Task) {
+	defer this.mgr.freeWorker(this)
+	for {
+		select {
+		case task := <-taskC:
+			task.Do()
+		default:
+			return
 		}
-	}()
+	}
 }
 
 var (
@@ -58,9 +44,16 @@ var (
 	createOnce      sync.Once
 )
 
-func Go(fn interface{}, args ...interface{}) error {
+func Submit(fn interface{}, args ...interface{}) error {
 	createOnce.Do(func() {
-		defaultTaskPool = NewTaskPool(runtime.NumCPU(), defaultTaskSize, defaultIdleTime)
+		defaultTaskPool = NewTaskPool(runtime.NumCPU()*2, defaultTaskSize)
 	})
 	return defaultTaskPool.Submit(fn, args...)
+}
+
+func SubmitTask(task Task) error {
+	createOnce.Do(func() {
+		defaultTaskPool = NewTaskPool(runtime.NumCPU()*2, defaultTaskSize)
+	})
+	return defaultTaskPool.SubmitTask(task)
 }
