@@ -1,7 +1,8 @@
 package asynwarp
 
 import (
-	"github.com/yddeng/utils/callFunc"
+	"github.com/yddeng/utils"
+	"github.com/yddeng/utils/task"
 	"reflect"
 )
 
@@ -16,22 +17,32 @@ func WrapFunc(oriFunc interface{}) wrapFunc {
 
 	return func(callback interface{}, args ...interface{}) {
 		f := func() {
-			out, err := callFunc.CallFunc(oriFunc, args...)
+			out, err := utils.CallFunc(oriFunc, args...)
 			if err != nil {
 				panic(err)
 			}
 
 			if len(out) > 0 {
 				if nil != callback {
-					callFunc.CallFunc(callback, out...)
+					utils.CallFunc(callback, out...)
 				}
 			} else {
 				if nil != callback {
-					callFunc.CallFunc(callback)
+					utils.CallFunc(callback)
 				}
 			}
 		}
 
-		go f()
+		if taskPool != nil {
+			taskPool.Submit(f)
+		} else {
+			go f()
+		}
 	}
+}
+
+var taskPool *task.TaskPool
+
+func SetTaskPool(p *task.TaskPool) {
+	taskPool = p
 }
