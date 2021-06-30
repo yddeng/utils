@@ -13,19 +13,11 @@ type TaskPool struct {
 	workers    int
 	workerSize int
 	workerLock sync.Mutex
-	workerPool sync.Pool
 
 	taskChan chan Task
 
 	die     chan struct{}
 	dieOnce sync.Once
-}
-
-func (this *TaskPool) freeWorker(worker *taskWorker) {
-	this.workerLock.Lock()
-	this.workers--
-	this.workerPool.Put(worker)
-	this.workerLock.Unlock()
 }
 
 func (this *TaskPool) Running() int {
@@ -57,10 +49,29 @@ func (this *TaskPool) submit(task Task) error {
 
 	if this.workerSize == 0 || this.workers < this.workerSize {
 		this.workers++
-		w := this.workerPool.Get().(*taskWorker)
-		go w.run(taskChan)
+		this.goWorker(taskChan)
 	}
 	return nil
+}
+
+func (this *TaskPool) goWorker(taskC chan Task) {
+	go func() {
+		defer func() {
+			this.workerLock.Lock()
+			this.workers--
+			this.workerLock.Unlock()
+		}()
+
+		for {
+			select {
+			case task := <-taskC:
+				task.Do()
+			default:
+				return
+			}
+		}
+	}()
+
 }
 
 func (this *TaskPool) Submit(fn interface{}, args ...interface{}) error {
@@ -91,9 +102,6 @@ func NewTaskPool(workerSize, taskSize int) *TaskPool {
 	pool.die = make(chan struct{})
 	pool.workerSize = workerSize
 	pool.taskChan = make(chan Task, taskSize)
-	pool.workerPool.New = func() interface{} {
-		return &taskWorker{mgr: pool}
-	}
 
 	return pool
 }
