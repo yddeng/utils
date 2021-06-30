@@ -20,7 +20,7 @@ type TaskPool struct {
 	dieOnce sync.Once
 }
 
-func (this *TaskPool) Running() int {
+func (this *TaskPool) NumWorker() int {
 	this.workerLock.Lock()
 	defer this.workerLock.Unlock()
 	return this.workers
@@ -33,9 +33,11 @@ func (this *TaskPool) submit(task Task) error {
 	default:
 	}
 
-	taskChan := this.taskChan
+	var taskChan chan Task
 	if this.workerSize == 0 {
 		taskChan = make(chan Task, 1)
+	} else {
+		taskChan = this.taskChan
 	}
 
 	select {
