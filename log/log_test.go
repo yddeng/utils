@@ -48,3 +48,10 @@ func TestNew(t *testing.T) {
 
 	log.Println("file log print")
 }
+
+func TestDebugf(t *testing.T) {
+	Debug("default debug")
+
+	SetOutput("./", "test.log", 1024)
+	Debug("default debug with output")
+}

@@ -7,6 +7,7 @@ import (
 
 /*
    全局默认提供一个Logger对外句柄，可以直接使用API系列调用
+   不设置输出对象时，仅在控制台打印
    全局日志对象 stdOut
 */
 var defaultLogger = newLogger(nil)

@@ -304,51 +304,67 @@ func (l *Logger) output(lev Level, format string, v ...interface{}) {
 }
 
 func (l *Logger) Debug(v ...interface{}) {
-	if !l.debugClosed {
+	if l != nil && !l.debugClosed {
 		l.output(DEBUG, "", v...)
 	}
 }
 
 func (l *Logger) Debugf(format string, v ...interface{}) {
-	if !l.debugClosed {
+	if l != nil && !l.debugClosed {
 		l.output(DEBUG, format, v...)
 	}
 }
 
 func (l *Logger) Info(v ...interface{}) {
-	l.output(INFO, "", v...)
+	if l != nil {
+		l.output(INFO, "", v...)
+	}
 }
 
 func (l *Logger) Infof(format string, v ...interface{}) {
-	l.output(INFO, format, v...)
+	if l != nil {
+		l.output(INFO, format, v...)
+	}
 }
 
 func (l *Logger) Error(v ...interface{}) {
-	l.output(ERROR, "", v...)
+	if l != nil {
+		l.output(ERROR, "", v...)
+	}
 }
 
 func (l *Logger) Errorf(format string, v ...interface{}) {
-	l.output(ERROR, format, v...)
+	if l != nil {
+		l.output(ERROR, format, v...)
+	}
 }
 
 func (l *Logger) Fatal(v ...interface{}) {
-	l.output(FATAL, "", v...)
-	os.Exit(1)
+	if l != nil {
+		l.output(FATAL, "", v...)
+		os.Exit(1)
+	}
 }
 
 func (l *Logger) Fatalf(format string, v ...interface{}) {
-	l.output(FATAL, format, v...)
-	os.Exit(1)
+	if l != nil {
+		l.output(FATAL, format, v...)
+		os.Exit(1)
+	}
 }
 
 func (l *Logger) Panic(v ...interface{}) {
-	l.output(PANIC, "", v...)
-	panic(fmt.Sprintln(v...))
+	if l != nil {
+		l.output(PANIC, "", v...)
+		panic(fmt.Sprintln(v...))
+	}
 }
 
 func (l *Logger) Panicf(format string, v ...interface{}) {
-	l.output(PANIC, format, v...)
-	panic(fmt.Sprintf(format, v...))
+	if l != nil {
+		l.output(PANIC, format, v...)
+		panic(fmt.Sprintf(format, v...))
+	}
 }
 
 // Stack
@@ -362,5 +378,7 @@ func runStack(v ...interface{}) string {
 }
 
 func (l *Logger) Stack(v ...interface{}) {
-	l.output(ERROR, "", runStack(v...))
+	if l != nil {
+		l.output(ERROR, "", runStack(v...))
+	}
 }

@@ -27,7 +27,7 @@ func httpGet(reqUrl string, headers map[string]string) (*http.Response, error) {
 	return client.Do(req)
 }
 
-func HttpDownload(reqUrl string, chunkNum int64,filename string) error {
+func HttpDownload(reqUrl string, chunkNum int64, filename string) error {
 	if chunkNum <= 0 {
 		chunkNum = 1
 	}
