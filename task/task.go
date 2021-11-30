@@ -24,16 +24,17 @@ var (
 	createOnce      sync.Once
 )
 
-func Submit(fn interface{}, args ...interface{}) error {
+func Default() *TaskPool {
 	createOnce.Do(func() {
 		defaultTaskPool = NewTaskPool(runtime.NumCPU()*2, defaultTaskSize)
 	})
-	return defaultTaskPool.Submit(fn, args...)
+	return defaultTaskPool
+}
+
+func Submit(fn interface{}, args ...interface{}) error {
+	return Default().Submit(fn, args...)
 }
 
 func SubmitTask(task Task) error {
-	createOnce.Do(func() {
-		defaultTaskPool = NewTaskPool(runtime.NumCPU()*2, defaultTaskSize)
-	})
-	return defaultTaskPool.SubmitTask(task)
+	return Default().SubmitTask(task)
 }
