@@ -24,4 +24,13 @@ func TestNew(t *testing.T) {
 		t.Log(key, value)
 		return true
 	})
+
+	// sort
+	ls.Sort(func(key1, value1, key2, value2 interface{}) bool {
+		return key1.(int) > key2.(int)
+	})
+	ls.Range(func(key, value interface{}) bool {
+		t.Log(key, value)
+		return true
+	})
 }

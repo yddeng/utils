@@ -2,6 +2,7 @@ package lset
 
 import (
 	"container/list"
+	"sort"
 )
 
 type element struct {
@@ -56,5 +57,21 @@ func (this *LSet) Range(f func(key, value interface{}) bool) {
 		if !f(elem.key, elem.value) {
 			break
 		}
+	}
+}
+
+func (this *LSet) Sort(less func(key1, value1, key2, value2 interface{}) bool) {
+	elements := make([]*element, 0, this.Len())
+	for e := this.l.Front(); e != nil; e = e.Next() {
+		elements = append(elements, e.Value.(*element))
+	}
+
+	sort.Slice(elements, func(i, j int) bool {
+		return less(elements[i].key, elements[i].value, elements[j].key, elements[j].value)
+	})
+
+	this.l.Init()
+	for _, e := range elements {
+		this.l.PushBack(e)
 	}
 }
