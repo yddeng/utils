@@ -71,7 +71,9 @@ func (this *LSet) Sort(less func(key1, value1, key2, value2 interface{}) bool) {
 	})
 
 	this.l.Init()
-	for _, e := range elements {
-		this.l.PushBack(e)
+	this.m = map[interface{}]*list.Element{}
+	for _, elem := range elements {
+		e := this.l.PushBack(elem)
+		this.m[elem.key] = e
 	}
 }

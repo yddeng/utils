@@ -1,6 +1,8 @@
 package lset
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestNew(t *testing.T) {
 	ls := New()
@@ -18,8 +20,8 @@ func TestNew(t *testing.T) {
 
 	t.Log(ls.Load(2))
 
-	ls.Delete(3)
-	ls.Store(4, &i)
+	//ls.Delete(3)
+	ls.Store(4, "4")
 	ls.Range(func(key, value interface{}) bool {
 		t.Log(key, value)
 		return true
@@ -33,4 +35,13 @@ func TestNew(t *testing.T) {
 		t.Log(key, value)
 		return true
 	})
+
+	t.Log(ls.Load(2))
+	ls.Delete(2)
+	t.Log(ls.Len())
+	ls.Range(func(key, value interface{}) bool {
+		t.Log(key, value)
+		return true
+	})
+
 }
