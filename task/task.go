@@ -35,6 +35,6 @@ func Submit(fn interface{}, args ...interface{}) error {
 	return Default().Submit(fn, args...)
 }
 
-func SubmitTask(task Task) error {
-	return Default().SubmitTask(task)
+func SubmitTask(task Task, fullRet ...bool) error {
+	return Default().SubmitTask(task, fullRet...)
 }

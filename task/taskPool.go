@@ -26,7 +26,7 @@ func (this *TaskPool) NumWorker() int {
 	return this.workers
 }
 
-func (this *TaskPool) submit(task Task) error {
+func (this *TaskPool) submit(task Task, fullReturn bool) error {
 	select {
 	case <-this.die:
 		return errors.New("taskPool:Submit pool is stopped")
@@ -40,10 +40,14 @@ func (this *TaskPool) submit(task Task) error {
 		taskChan = this.taskChan
 	}
 
-	select {
-	case taskChan <- task:
-	default:
-		return errors.New("taskPool:Submit task channel is full")
+	if fullReturn {
+		select {
+		case taskChan <- task:
+		default:
+			return errors.New("taskPool:Submit task channel is full")
+		}
+	} else {
+		taskChan <- task
 	}
 
 	this.workerLock.Lock()
@@ -77,11 +81,15 @@ func (this *TaskPool) goWorker(taskC chan Task) {
 }
 
 func (this *TaskPool) Submit(fn interface{}, args ...interface{}) error {
-	return this.submit(&funcTask{fn: fn, args: args})
+	return this.submit(&funcTask{fn: fn, args: args}, false)
 }
 
-func (this *TaskPool) SubmitTask(task Task) error {
-	return this.submit(task)
+func (this *TaskPool) SubmitTask(task Task, fullRet ...bool) error {
+	fullReturn := false
+	if len(fullRet) > 0 && fullRet[0] {
+		fullReturn = true
+	}
+	return this.submit(task, fullReturn)
 }
 
 func (this *TaskPool) Stop() {
