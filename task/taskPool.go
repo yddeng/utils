@@ -26,6 +26,10 @@ func (this *TaskPool) NumWorker() int {
 	return this.workers
 }
 
+func (this *TaskPool) NumTask() int {
+	return len(this.taskChan)
+}
+
 func (this *TaskPool) submit(task Task, fullReturn bool) error {
 	select {
 	case <-this.die:
